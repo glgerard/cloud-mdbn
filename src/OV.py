@@ -35,9 +35,7 @@ def main(argv, batch_dir_prefix='OV_Batch', config_filename='ov_config.json'):
 
     datafiles = prepare_OV_TCGA_datafiles(config)
 
-    results = []
-
-    run_mdbn(batch_output_dir, batch_start_date_str, config, datafiles, numpy_rng, results, verbose)
+    run_mdbn(batch_output_dir, batch_start_date_str, config, datafiles, numpy_rng, verbose)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

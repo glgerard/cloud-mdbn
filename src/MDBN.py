@@ -27,9 +27,11 @@ All rights reserved.
 from __future__ import print_function, division
 
 import os
+import sys
 import datetime
 import traceback
 import logging
+from hashlib import md5
 
 import numpy
 import theano
@@ -37,6 +39,8 @@ import theano
 from utils import load_n_preprocess_data
 from utils import find_unique_classes
 from dbn import DBN
+
+from six.moves import cPickle
 
 def train_dbn(train_set, validation_set,
               name="",
@@ -88,6 +92,7 @@ def train_MDBN(datafiles,
                graph_output=False,
                output_folder='MDBN_run',
                network_file='network.npz',
+               tmp_folder='tmp',
                rng=None):
     """
     :param datafiles: a dictionary with the path to the unimodal datasets
@@ -117,6 +122,9 @@ def train_MDBN(datafiles,
     if rng is None:
         rng = numpy.random.RandomState(123)
 
+    if not os.path.isdir(tmp_folder):
+        os.mkdir(tmp_folder)
+
     #################################
     #     Training the RBM          #
     #################################
@@ -137,21 +145,30 @@ def train_MDBN(datafiles,
         netConfig = config[pathway]
         netConfig['inputNodes'] = train_set.get_value().shape[1]
 
-        dbn_dict[pathway], _, _ = train_dbn(
-            train_set, validation_set,
-            name=pathway,
-            gauss=True,
-            batch_size=netConfig["batchSize"],
-            k=netConfig["k"],
-            layers_sizes=netConfig["layersNodes"],
-            pretraining_epochs=netConfig["epochs"],
-            pretrain_lr=netConfig["lr"],
-            lambdas=netConfig["lambdas"],
-            rng=rng,
-            persistent=netConfig["persistent"],
-            run=run,
-            verbose=verbose,
-            graph_output=graph_output)
+        config_hash = md5(str(config[pathway].values())).hexdigest()
+
+        dump_file = '%s/dbn_%s_%s_%d.save' % (tmp_folder, pathway, config_hash, run)
+        if os.path.isfile(dump_file):
+            with open(dump_file, 'rb') as f:
+                dbn_dict[pathway] = cPickle.load(f)
+        else:
+            dbn_dict[pathway], _, _ = train_dbn(
+                train_set, validation_set,
+                name=pathway,
+                gauss=True,
+                batch_size=netConfig["batchSize"],
+                k=netConfig["k"],
+                layers_sizes=netConfig["layersNodes"],
+                pretraining_epochs=netConfig["epochs"],
+                pretrain_lr=netConfig["lr"],
+                lambdas=netConfig["lambdas"],
+                rng=rng,
+                persistent=netConfig["persistent"],
+                run=run,
+                verbose=verbose,
+                graph_output=graph_output)
+            with open(dump_file, 'wb') as f:
+                cPickle.dump(dbn_dict[pathway], f, protocol=cPickle.HIGHEST_PROTOCOL)
 
         output_t, output_v = dbn_dict[pathway].MLP_output_from_datafile(datafiles[pathway],
                                                                     holdout=holdout,
@@ -171,19 +188,28 @@ def train_MDBN(datafiles,
     netConfig = config['top']
     netConfig['inputNodes'] = joint_train_set.get_value().shape[1]
 
-    dbn_dict['top'], _, _ = train_dbn(joint_train_set, joint_val_set,
-                                      name='top',
-                                      gauss=False,
-                                      batch_size=netConfig["batchSize"],
-                                      k=netConfig["k"],
-                                      layers_sizes=netConfig["layersNodes"],
-                                      pretraining_epochs=netConfig["epochs"],
-                                      pretrain_lr=netConfig["lr"],
-                                      rng=rng,
-                                      persistent=netConfig["persistent"],
-                                      run=run,
-                                      verbose=verbose,
-                                      graph_output=graph_output)
+    config_hash = md5(str(config)).hexdigest()
+
+    dump_file = 'tmp/dbn_top_%s_%d.save' % (config_hash, run)
+    if os.path.isfile(dump_file):
+        with open(dump_file, 'rb') as f:
+            dbn_dict['top'] = cPickle.load(f)
+    else:
+        dbn_dict['top'], _, _ = train_dbn(joint_train_set, joint_val_set,
+                                          name='top',
+                                          gauss=False,
+                                          batch_size=netConfig["batchSize"],
+                                          k=netConfig["k"],
+                                          layers_sizes=netConfig["layersNodes"],
+                                          pretraining_epochs=netConfig["epochs"],
+                                          pretrain_lr=netConfig["lr"],
+                                          rng=rng,
+                                          persistent=netConfig["persistent"],
+                                          run=run,
+                                          verbose=verbose,
+                                          graph_output=graph_output)
+        with open(dump_file, 'wb') as f:
+            cPickle.dump(dbn_dict['top'], f, protocol=cPickle.HIGHEST_PROTOCOL)
 
     # Identifying the classes
 
@@ -250,7 +276,8 @@ def load_network(input_file, input_folder):
 
     return config, dbn_dict
 
-def run_mdbn(batch_output_dir, batch_start_date_str, config, datafiles, numpy_rng, results, verbose):
+def run_mdbn(batch_output_dir, batch_start_date_str, config, datafiles, numpy_rng, verbose):
+    results = []
     for run in range(config["runs"]):
         try:
             run_start_date = datetime.datetime.now()

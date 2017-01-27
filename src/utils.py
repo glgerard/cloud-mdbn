@@ -184,13 +184,11 @@ def find_unique_classes(dbn_output):
 
     return classified_samples, distance_matrix
 
-
 def usage():
     print("--help usage summary")
     print("--config=filename configuration file")
     print("--output=filename output file")
     print("--verbose print additional information during training")
-
 
 def init(argv, batch_dir_prefix, config_filename, output_dir='MDBN_run', config_dir='config'):
     log_enabled = False
