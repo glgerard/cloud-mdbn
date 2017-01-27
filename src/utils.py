@@ -27,6 +27,11 @@ All rights reserved.
 import numpy
 from scipy.spatial import distance
 import os
+import sys
+import getopt
+import json
+import logging
+import datetime
 import gzip
 from scipy import stats
 import theano
@@ -43,13 +48,14 @@ def import_TCGA_data(file, datadir, dtype):
             ncols = len(f.readline().split('\t'))
 
     data = numpy.loadtxt(file,
-                       dtype=dtype,
-                       delimiter='\t',
-                       skiprows=1,
-                       usecols=range(1,ncols))
+                         dtype=dtype,
+                         delimiter='\t',
+                         skiprows=1,
+                         usecols=range(1, ncols))
 
     os.chdir(root_dir)
-    return (data.shape[1], ncols-1, data)
+    return (data.shape[1], ncols - 1, data)
+
 
 def get_minibatches_idx(n, batch_size, rng=None):
     """
@@ -74,6 +80,7 @@ def get_minibatches_idx(n, batch_size, rng=None):
 
     return range(len(minibatches)), minibatches
 
+
 def load_n_preprocess_data(datafile,
                            dtype=theano.config.floatX,
                            holdout=0.1,
@@ -93,7 +100,7 @@ def load_n_preprocess_data(datafile,
     if transform_fn is not None:
         data = transform_fn(data, exponent)
 
-    zdata = stats.zscore(data,axis=1)
+    zdata = stats.zscore(data, axis=1)
     zdata1 = zdata[~numpy.isnan(zdata).any(axis=1)]
     zdata = zdata1.T
 
@@ -104,7 +111,7 @@ def load_n_preprocess_data(datafile,
     if repeats > 1:
         zdata = numpy.repeat(zdata, repeats=repeats, axis=0)
 
-    validation_set_size = int(n_cols*holdout)
+    validation_set_size = int(n_cols * holdout)
 
     # pre shuffle the data if we have a validation set
     _, indexes = get_minibatches_idx(n_cols, n_cols -
@@ -117,6 +124,7 @@ def load_n_preprocess_data(datafile,
         validation_set = None
 
     return train_set, validation_set
+
 
 # The following function help reduce the number of classes based on highest
 # frequency and lowest Hamming distance
@@ -155,7 +163,7 @@ def remap_class(classified_samples, distance_matrix, n_classes):
     # permitted class by hamming distance
     # TODO: evaluate if hierarchical clustering leads to better results
 
-    new_classification = merge_classes(map=map,D=distance_matrix,n_classes=n_classes)
+    new_classification = merge_classes(map=map, D=distance_matrix, n_classes=n_classes)
     return numpy.array([new_classification[i] for i in classified_samples])
 
 
@@ -176,7 +184,58 @@ def find_unique_classes(dbn_output):
 
     return classified_samples, distance_matrix
 
+
 def usage():
     print("--help usage summary")
     print("--config=filename configuration file")
+    print("--output=filename output file")
     print("--verbose print additional information during training")
+
+
+def init(argv, batch_dir_prefix, config_filename, output_dir='MDBN_run', config_dir='config'):
+    log_enabled = False
+    verbose = False
+
+    try:
+        opts, args = getopt.getopt(argv, "hc:lv", ["help", "config=", "log", "verbose"])
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            usage()
+            sys.exit()
+        elif opt in ("-v", "--verbose"):
+            verbose = True
+        elif opt in ("-c", "--config"):
+            config_filename = arg
+        elif opt in ("-l", "--log"):
+            log_enabled = True
+
+    with open('%s/%s' % (config_dir, config_filename)) as config_file:
+        config = json.load(config_file)
+
+    numpy_rng = numpy.random.RandomState(config["seed"])
+
+    batch_start_date = datetime.datetime.now()
+    batch_start_date_str = batch_start_date.strftime("%Y-%m-%d_%H%M")
+
+    if not os.path.isdir(output_dir):
+        os.mkdir(output_dir)
+
+    batch_output_dir = '%s/%s_%s' % \
+                       (output_dir, batch_dir_prefix, batch_start_date_str)
+    if not os.path.isdir(batch_output_dir):
+        os.mkdir(batch_output_dir)
+
+    if verbose:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+
+    if log_enabled:
+        logging.basicConfig(filename=output_dir + '/batch.log', level=log_level)
+    else:
+        logging.basicConfig(level=log_level)
+
+    return batch_output_dir, batch_start_date_str, config, numpy_rng, verbose

@@ -29,6 +29,7 @@ from __future__ import print_function, division
 import timeit
 import sys
 import os
+import logging
 
 import matplotlib.pyplot as plt
 
@@ -61,7 +62,7 @@ class DBN(object):
     Originally from: http://deeplearning.net/tutorial/code/DBN.py
     """
 
-    def __init__(self, numpy_rng=None, theano_rng=None, n_ins=784,
+    def __init__(self, name="", numpy_rng=None, theano_rng=None, n_ins=784,
                  gauss=True,
                  hidden_layers_sizes=[400], n_outs=40,
                  W_list=None, b_list=None, c_list=None):
@@ -102,6 +103,7 @@ class DBN(object):
                        None it is randomly initialized
         """
 
+        self.name = name
         self.n_ins = n_ins
         self.sigmoid_layers = []
         self.rbm_layers = []
@@ -133,30 +135,31 @@ class DBN(object):
         # will train these RBMs (which will lead to chainging the
         # weights of the MLP as well).
 
-        for i in range(self.n_layers):
+        for layer in range(self.n_layers):
             # construct the sigmoidal layer
 
             # the size of the input is either the number of hidden
             # units of the layer below or the input size if we are on
             # the first layer
-            if i == 0:
+            if layer == 0:
                 input_size = n_ins
             else:
-                input_size = self.stacked_layers_sizes[i - 1]
+                input_size = self.stacked_layers_sizes[layer - 1]
 
             # the input to this layer is either the activation of the
             # hidden layer below or the input of the DBN if you are on
             # the first layer
-            if i == 0:
+            if layer == 0:
                 layer_input = self.x
             else:
                 layer_input = self.sigmoid_layers[-1].output
 
             n_in = input_size
-            n_out= self.stacked_layers_sizes[i]
+            n_out= self.stacked_layers_sizes[layer]
 
-            print('Adding a layer with %i input and %i outputs' %
-                  (n_in, n_out))
+            logging.debug('DBN:%s:Adding layer:%i' % (name, layer))
+            logging.debug('DBN:%s:layer:%i:input:%i' % (name, layer, n_in))
+            logging.debug('DBN:%s:layer:%i:output:%i' % (name, layer, n_out))
 
             if W_list is None:
                 W = numpy.asarray(numpy_rng.uniform(
@@ -165,17 +168,17 @@ class DBN(object):
                                 size=(n_in, n_out)
                              ),dtype=theano.config.floatX)
             else:
-                W = W_list[i]
+                W = W_list[layer]
 
             if b_list is None:
                 b = numpy.zeros((n_out,), dtype=theano.config.floatX)
             else:
-                b = b_list[i]
+                b = b_list[layer]
 
             if c_list is None:
                 c = numpy.zeros((n_in,), dtype=theano.config.floatX)
             else:
-                c = c_list[i]
+                c = c_list[layer]
 
             sigmoid_layer = HiddenLayer(rng=numpy_rng,
                                         input=layer_input,
@@ -189,24 +192,28 @@ class DBN(object):
             self.sigmoid_layers.append(sigmoid_layer)
 
             # Construct an RBM that shared weights with this layer
-            if (i==0) and gauss:
-                rbm_layer = GRBM(numpy_rng=numpy_rng,
-                                 theano_rng=theano_rng,
-                                 input=layer_input,
-                                 n_visible=input_size,
-                                 n_hidden=self.stacked_layers_sizes[i],
-                                 W=sigmoid_layer.W,
-                                 hbias=sigmoid_layer.b,
-                                 vbias=theano.shared(c,name='vbias',borrow=True))
+            if (layer==0) and gauss:
+                rbm_layer = GRBM(
+                    name='%s.%i' % (name,layer),
+                    numpy_rng=numpy_rng,
+                    theano_rng=theano_rng,
+                    input=layer_input,
+                    n_visible=input_size,
+                    n_hidden=self.stacked_layers_sizes[layer],
+                    W=sigmoid_layer.W,
+                    hbias=sigmoid_layer.b,
+                    vbias=theano.shared(c, name='vbias', borrow=True))
             else:
-                rbm_layer = RBM(numpy_rng=numpy_rng,
-                                theano_rng=theano_rng,
-                                input=layer_input,
-                                n_visible=input_size,
-                                n_hidden=self.stacked_layers_sizes[i],
-                                W=sigmoid_layer.W,
-                                hbias=sigmoid_layer.b,
-                                vbias=theano.shared(c,name='vbias',borrow=True))
+                rbm_layer = RBM(
+                    name='%s.%i' % (name,layer),
+                    numpy_rng=numpy_rng,
+                    theano_rng=theano_rng,
+                    input=layer_input,
+                    n_visible=input_size,
+                    n_hidden=self.stacked_layers_sizes[layer],
+                    W=sigmoid_layer.W,
+                    hbias=sigmoid_layer.b,
+                    vbias=theano.shared(c, name='vbias', borrow=True))
 
             self.params.extend(rbm_layer.params)
 
@@ -391,10 +398,12 @@ class DBN(object):
         :return:
         '''
 
-        print('... getting the pretraining functions')
-        print('Training set sample size %i' % train_set_x.get_value().shape[0])
+        logging.debug('RUN:%i:DBN:%s:generating the training functions' % (run, self.name))
+        logging.info('RUN:%i:DBN:%s:training set sample size:%i' %
+                     (run,self.name,train_set_x.get_value().shape[0]))
         if validation_set_x is not None:
-            print('Validation set sample size %i' % validation_set_x.get_value().shape[0])
+            logging.info('RUN:%i:DBN:%s:validation set sample size:%i' %
+                         (run,self.name,validation_set_x.get_value().shape[0]))
 
         training_fns, free_energy_gap_fns = self.training_functions(train_set_x=train_set_x,
                                                                     k=k,
@@ -403,7 +412,7 @@ class DBN(object):
                                                                     persistent=persistent,
                                                                     monitor=monitor)
 
-        print('... pre-training the model')
+        logging.debug('RUN:%i:DBN:%s:start training' % (run, self.name))
         start_time = timeit.default_timer()
         # train layer-wise
 
@@ -427,23 +436,27 @@ class DBN(object):
 
         n_train_batches = idx_minibatches[-1] + 1
 
-        print('Number of training batches: %d' % n_train_batches)
+        logging.debug('RUN:%i:DBN:%s:number of training batches:%d' %
+                      (run, self.name, n_train_batches))
 
-        for i in range(self.n_layers):
+        for layer in range(self.n_layers):
             if graph_output:
-                plt.figure(i+1)
+                plt.figure(layer+1)
 
-            if isinstance(self.rbm_layers[i], GRBM):
+            if isinstance(self.rbm_layers[layer], GRBM):
                 momentum = 0.0
             else:
                 momentum = 0.6
+
+            rbm_name = self.rbm_layers[layer].name
 
             # go through training epochs
             epoch = 0
 
             minCost = numpy.inf
+            bestEpoch = 0
 
-            while epoch < pretraining_epochs[i]:
+            while epoch < pretraining_epochs[layer]:
                 epoch = epoch + 1
 
                 idx_minibatches, minibatches = get_minibatches_idx(n_data,
@@ -451,35 +464,31 @@ class DBN(object):
                                                                    self.numpy_rng)
 
                 # go through the training set
-                if not isinstance(self.rbm_layers[i], GRBM) and epoch == 6:
+                if not isinstance(self.rbm_layers[layer], GRBM) and epoch == 6:
                     momentum = 0.9
 
                 costs=[]
                 for mb, minibatch in enumerate(minibatches):
-                    costs.append(training_fns[i](indexes=minibatch,
+                    costs.append(training_fns[layer](indexes=minibatch,
                                                    momentum=momentum,
-                                                   lr=pretrain_lr[i],
+                                                   lr=pretrain_lr[layer],
                                                    batch_size=len(minibatch)))
 
                 meanCost = -numpy.mean(costs)
-                if verbose:
-                    print('Pre-training cost (layer %i, epoch %d): ' % (i, epoch), end=' ')
-                    print(meanCost)
-                else:
-                    print('.',end='')
 
                 if meanCost < minCost:
-                    print('\nMinimum cost (layer %i, epoch %d): ' % (i, epoch), end=' ')
-                    print(meanCost)
+                    logging.debug('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
+                                     (run, rbm_name, layer, epoch, meanCost))
                     minCost = meanCost
+                    bestEpoch = epoch
                     bestParams = dict()
-                    for p in self.rbm_layers[i].params:
+                    for p in self.rbm_layers[layer].params:
                         bestParams[p.name] = p.get_value()
 
                 # Plot the output
                 if graph_output:
                     plt.clf()
-                    training_output = self.get_output(train_set_x, i)
+                    training_output = self.get_output(train_set_x, layer)
                     plt.imshow(training_output, cmap='gray')
                     plt.axis('tight')
                     plt.title('epoch %d' % (epoch))
@@ -488,35 +497,35 @@ class DBN(object):
 
                 if validation_set_x is not None:
                     # Compute the free energy gap
-                    if i == 0:
+                    if layer == 0:
                         input_t_set = t_set
                         input_v_set = v_set
                     else:
                         input_t_set = self.get_output(
-                                        t_set[range(v_set.shape[0])], i-1)
-                        input_v_set = self.get_output(v_set, i-1)
+                                        t_set[range(v_set.shape[0])], layer-1)
+                        input_v_set = self.get_output(v_set, layer-1)
 
-                    free_energy_train, free_energy_test = free_energy_gap_fns[i](
+                    free_energy_train, free_energy_test = free_energy_gap_fns[layer](
                                         input_t_set,
                                         input_v_set)
                     free_energy_gap = free_energy_test.mean() - free_energy_train.mean()
 
-                    print('\nFree energy gap (layer %i, epoch %i): ' % (i, epoch), end=' ')
-                    print(free_energy_gap)
+                    logging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:free energy gap:%f' %
+                                 (run, rbm_name, layer, epoch, free_energy_gap))
 
-            print('\n*** Run %i - Minimum cost %f' % (run, minCost))
-            self.rbm_layers[i].W = theano.shared(numpy.asarray(bestParams['W'],dtype=theano.config.floatX))
-            self.rbm_layers[i].hbias = theano.shared(numpy.asarray(bestParams['hbias'], dtype=theano.config.floatX))
-            self.rbm_layers[i].vbias = theano.shared(numpy.asarray(bestParams['vbias'], dtype=theano.config.floatX))
+            logging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
+                         (run, rbm_name, layer, bestEpoch, minCost))
+            self.rbm_layers[layer].W = theano.shared(numpy.asarray(bestParams['W'],dtype=theano.config.floatX))
+            self.rbm_layers[layer].hbias = theano.shared(numpy.asarray(bestParams['hbias'], dtype=theano.config.floatX))
+            self.rbm_layers[layer].vbias = theano.shared(numpy.asarray(bestParams['vbias'], dtype=theano.config.floatX))
 
             if graph_output:
                 plt.close()
 
         end_time = timeit.default_timer()
 
-
-        print('The pretraining code for file ' + os.path.split(__file__)[1] +
-              ' ran for %.2fm' % ((end_time - start_time) / 60.), file=sys.stderr)
+        logging.debug('RUN:%i:DBN:%s:the training code ran for:%.2fm' %
+                     (run,self.name,((end_time - start_time) / 60.)))
 
     def MLP_output_from_datafile(self,
                                  datafile,
@@ -546,7 +555,7 @@ class DBN(object):
         :return: None
         '''
         print(i, node, "input(s) value(s):", [input[0] for input in fn.inputs],
-              end='\n')
+              end='\n', file=sys.stderr)
 
     def inspect_outputs(self, i, node, fn):
         '''
@@ -557,7 +566,7 @@ class DBN(object):
         :param fn:
         :return: None
         '''
-        print(" output(s) value(s):", [output[0] for output in fn.outputs])
+        print(" output(s) value(s):", [output[0] for output in fn.outputs], file=sys.stderr)
 
 def train_MNIST_Gaussian(graph_output=False):
     # Load the data

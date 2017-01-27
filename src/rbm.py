@@ -48,6 +48,7 @@ class RBM(object):
     """Initial version from http://deeplearning.net/tutorial/code/rbm.py """
     def __init__(
         self,
+        name="",
         input=None,
         n_visible=784,
         n_hidden=500,
@@ -81,6 +82,7 @@ class RBM(object):
         pointing to a shared visible units bias
         """
 
+        self.name = name
         self.n_visible = n_visible
         self.n_hidden = n_hidden
 
@@ -737,6 +739,7 @@ class RBM(object):
 class GRBM(RBM):
     # Implement a Gaussian-Bernoulli Restricted Boltzmann Machine
     def __init__(self,
+                 name="",
                  input=None,
                  n_visible=784,
                  n_hidden=500,
@@ -746,7 +749,7 @@ class GRBM(RBM):
                  numpy_rng=None,
                  theano_rng=None,
                  error_free=True):
-        super(GRBM, self).__init__(input, n_visible, n_hidden,
+        super(GRBM, self).__init__(name, input, n_visible, n_hidden,
                                    W, hbias, vbias, numpy_rng, theano_rng)
         self.error_free = error_free
 
