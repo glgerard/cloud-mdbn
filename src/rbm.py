@@ -96,8 +96,10 @@ class RBM(object):
         self.numpy_rng = numpy_rng
         self.theano_rng = theano_rng
 
+        self.training_end_state = None
+
         if W is None:
-            # W is initialized with `initial_W` which is uniformely
+            # W is initialized with `initial_W` which is uniformly
             # sampled from -4*sqrt(6./(n_visible+n_hidden)) and
             # 4*sqrt(6./(n_hidden+n_visible)) the output of uniform if
             # converted using asarray to dtype theano.config.floatX so

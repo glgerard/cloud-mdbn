@@ -170,6 +170,11 @@ def train_MDBN(datafiles,
             with open(dump_file, 'wb') as f:
                 cPickle.dump(dbn_dict[pathway], f, protocol=cPickle.HIGHEST_PROTOCOL)
 
+        for layer in range(dbn_dict[pathway].n_layers):
+            rbm = dbn_dict[pathway].rbm_layers[layer]
+            logging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
+                         (run, rbm.name, layer, rbm.training_end_state[0], rbm.training_end_state[1]))
+
         output_t, output_v = dbn_dict[pathway].MLP_output_from_datafile(datafiles[pathway],
                                                                     holdout=holdout,
                                                                     repeats=repeats)

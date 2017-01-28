@@ -518,6 +518,7 @@ class DBN(object):
             self.rbm_layers[layer].W = theano.shared(numpy.asarray(bestParams['W'],dtype=theano.config.floatX))
             self.rbm_layers[layer].hbias = theano.shared(numpy.asarray(bestParams['hbias'], dtype=theano.config.floatX))
             self.rbm_layers[layer].vbias = theano.shared(numpy.asarray(bestParams['vbias'], dtype=theano.config.floatX))
+            self.rbm_layers[layer].training_end_state = (bestEpoch, minCost)
 
             if graph_output:
                 plt.close()
