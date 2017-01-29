@@ -31,6 +31,7 @@ import sys
 import datetime
 import traceback
 import logging
+import mdbnlogging
 import getopt
 
 from hashlib import md5
@@ -60,8 +61,8 @@ def train_dbn(train_set, validation_set,
               verbose=False,
               graph_output=False
               ):
-    logging.info('RUN:%i:DBN:%s:visible nodes:%i' % (run,name,train_set.get_value().shape[1]))
-    logging.info('RUN:%i:DBN:%s:output nodes:%i' % (run,name,layers_sizes[-1]))
+    mdbnlogging.info('RUN:%i:DBN:%s:visible nodes:%i' % (run, name, train_set.get_value().shape[1]))
+    mdbnlogging.info('RUN:%i:DBN:%s:output nodes:%i' % (run, name, layers_sizes[-1]))
     dbn = DBN(name=name, numpy_rng=rng, n_ins=train_set.get_value().shape[1],
               gauss=gauss,
               hidden_layers_sizes=layers_sizes[:-1],
@@ -138,7 +139,7 @@ def train_MDBN(datafiles,
     output_v_list = []
 
     for pathway in config["pathways"]:
-        logging.info('RUN:%i:DBN:%s:start training' % (run, pathway))
+        mdbnlogging.info('RUN:%i:DBN:%s:start training' % (run, pathway))
 
         train_set, validation_set = load_n_preprocess_data(datafiles[pathway],
                                                        holdout=holdout,
@@ -176,8 +177,8 @@ def train_MDBN(datafiles,
 
         for layer in range(dbn_dict[pathway].n_layers):
             rbm = dbn_dict[pathway].rbm_layers[layer]
-            logging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
-                         (run, rbm.name, layer, rbm.training_end_state[0], rbm.training_end_state[1]))
+            mdbnlogging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
+                             (run, rbm.name, layer, rbm.training_end_state[0], rbm.training_end_state[1]))
 
         output_t, output_v = dbn_dict[pathway].MLP_output_from_datafile(datafiles[pathway],
                                                                     holdout=holdout,
@@ -185,7 +186,7 @@ def train_MDBN(datafiles,
         output_t_list.append(output_t)
         output_v_list.append(output_v)
 
-    logging.info('RUN:%i:DBN:top:start training' % run)
+    mdbnlogging.info('RUN:%i:DBN:top:start training' % run)
 
     joint_train_set = theano.shared(numpy.hstack(output_t_list), borrow=True)
 
@@ -309,6 +310,7 @@ def init(argv, batch_dir_prefix, config_filename, output_dir='MDBN_run'):
         elif opt in ("-l", "--log"):
             log_enabled = True
         elif opt in ("-d", "--dameon"):
+            log_enabled = True
             daemonized = True
         elif opt in ("-p", "--port"):
             try:
@@ -332,16 +334,16 @@ def init(argv, batch_dir_prefix, config_filename, output_dir='MDBN_run'):
         os.mkdir(batch_output_dir)
 
     if verbose:
-        log_level = logging.DEBUG
+        log_level = mdbnlogging.DEBUG
     else:
-        log_level = logging.INFO
+        log_level = mdbnlogging.INFO
 
     if log_enabled:
-        logging.basicConfig(filename=output_dir + '/batch.log', level=log_level)
+        mdbnlogging.basicConfig(filename=batch_output_dir + '/batch.log', log_level=log_level)
     else:
-        logging.basicConfig(level=log_level)
+        mdbnlogging.basicConfig(log_level=log_level)
 
-    return batch_output_dir, batch_start_date_str, daemonized, port, config_filename, verbose
+    return daemonized, port, config_filename, verbose
 
 def run(config, datafiles, verbose):
     numpy_rng = numpy.random.RandomState(config["seed"])
@@ -350,9 +352,9 @@ def run(config, datafiles, verbose):
     for run in range(config["runs"]):
         try:
             run_start_date = datetime.datetime.now()
-            logging.info('RUN:%i:start date:%s:start time:%s' % (run,
-                                                                 run_start_date.strftime("%Y.%m.%d"),
-                                                                 run_start_date.strftime("%H.%M.%S")))
+            mdbnlogging.info('RUN:%i:start date:%s:start time:%s' % (run,
+                                                                     run_start_date.strftime("%Y.%m.%d"),
+                                                                     run_start_date.strftime("%H.%M.%S")))
             dbn_output = train_MDBN(datafiles,
                                     config,
                                     output_folder=batch_output_dir,
@@ -364,11 +366,11 @@ def run(config, datafiles, verbose):
                                     rng=numpy_rng)
             current_date_time = datetime.datetime.now()
             classes = find_unique_classes((dbn_output > 0.5) * numpy.ones_like(dbn_output))
-            logging.info('RUN:%i:classes identified:%d' % (run, numpy.max(classes[0])))
+            mdbnlogging.info('RUN:%i:classes identified:%d' % (run, numpy.max(classes[0])))
             results.append(classes[0])
-            logging.info('RUN:%i:stop date:%s:stop time:%s' % (run,
-                                                               current_date_time.strftime("%Y.%m.%d"),
-                                                               current_date_time.strftime("%H.%M.%S")))
+            mdbnlogging.info('RUN:%i:stop date:%s:stop time:%s' % (run,
+                                                                   current_date_time.strftime("%Y.%m.%d"),
+                                                                   current_date_time.strftime("%H.%M.%S")))
         except:
             logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[0]))
             logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[1]))

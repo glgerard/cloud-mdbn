@@ -49,8 +49,8 @@ def run_net(uuid):
 def main(argv, batch_dir_prefix='OV_Batch', config_filename='ov_config.json'):
     config_dir = 'config'
 
-    batch_output_dir, batch_start_date_str, daemonized, port, \
-    config_filename, verbose = MDBN.init(argv, batch_dir_prefix, config_filename)
+    daemonized, port, config_filename, verbose = \
+        MDBN.init(argv, batch_dir_prefix, config_filename)
 
     print (batch_output_dir)
     if not daemonized:

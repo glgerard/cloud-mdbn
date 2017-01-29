@@ -9,6 +9,9 @@ def usage():
     print "exp_launcher <experiment.csv> <template.json>"
 
 def main(argv):
+    host = '127.0.0.1'
+    port = 5000
+
     experimentCsvFile = argv[0]
     templateJsonFile = argv[1]
 
@@ -64,7 +67,8 @@ def main(argv):
                         newConfig['dbns'][dbn]['lr'][layer] = float(lr)
                         print(newConfig)
                         uuid = md5(str(newConfig)).hexdigest()
-                        r = requests.post('http://127.0.0.1:5000/api/run_net/%s' % uuid, json=newConfig)
+                        r = requests.post('http://%s:%d/api/run_net/%s' % (host, port, uuid),
+                                          json=newConfig)
                         count=count+1
                         sys.exit()
 
