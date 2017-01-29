@@ -1,7 +1,7 @@
 import sys
 
 from utils import init
-from MDBN import run_mdbn
+from MDBN import run
 
 def prepare_AML_TCGA_datafiles(config):
 
@@ -17,7 +17,7 @@ def main(argv, batch_dir_prefix = 'AML_Batch_', config_filename = 'aml_config.js
 
     datafiles = prepare_AML_TCGA_datafiles(config)
 
-    run_mdbn(batch_output_dir, batch_start_date_str, config, datafiles, numpy_rng, results, verbose)
+    run(batch_output_dir, batch_start_date_str, config, datafiles, numpy_rng, results, verbose)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

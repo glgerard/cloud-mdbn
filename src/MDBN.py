@@ -31,6 +31,8 @@ import sys
 import datetime
 import traceback
 import logging
+import getopt
+
 from hashlib import md5
 
 import numpy
@@ -38,6 +40,8 @@ import theano
 
 from utils import load_n_preprocess_data
 from utils import find_unique_classes
+from utils import usage
+
 from dbn import DBN
 
 from six.moves import cPickle
@@ -142,10 +146,10 @@ def train_MDBN(datafiles,
                                                        datadir=datadir,
                                                        rng=rng)
 
-        netConfig = config[pathway]
+        netConfig = config['dbns'][pathway]
         netConfig['inputNodes'] = train_set.get_value().shape[1]
 
-        config_hash = md5(str(config[pathway].values())).hexdigest()
+        config_hash = md5(str(netConfig.values())).hexdigest()
 
         dump_file = '%s/dbn_%s_%s_%d.save' % (tmp_folder, pathway, config_hash, run)
         if os.path.isfile(dump_file):
@@ -281,7 +285,67 @@ def load_network(input_file, input_folder):
 
     return config, dbn_dict
 
-def run_mdbn(batch_output_dir, batch_start_date_str, config, datafiles, numpy_rng, verbose):
+def init(argv, batch_dir_prefix, config_filename, output_dir='MDBN_run'):
+    global batch_output_dir
+    global batch_start_date_str
+    log_enabled = False
+    verbose = False
+    daemonized = False
+    port = 5000
+
+    try:
+        opts, args = getopt.getopt(argv, "hc:dl:p:v", ["help", "config=", "daemon", "log=", "port=", "verbose"])
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            usage()
+            sys.exit()
+        elif opt in ("-v", "--verbose"):
+            verbose = True
+        elif opt in ("-c", "--config"):
+            config_filename = arg
+        elif opt in ("-l", "--log"):
+            log_enabled = True
+        elif opt in ("-d", "--dameon"):
+            daemonized = True
+        elif opt in ("-p", "--port"):
+            try:
+                port = int(arg)
+            except ValueError:
+                raise ValueError('port must be a number beween 0 and 65535')
+            if port < 0 or port > 65535:
+                raise ValueError('port must be a number beween 0 and 65535')
+        else:
+            assert False, "unhandled option"
+
+    batch_start_date = datetime.datetime.now()
+    batch_start_date_str = batch_start_date.strftime("%Y-%m-%d_%H%M")
+
+    if not os.path.isdir(output_dir):
+        os.mkdir(output_dir)
+
+    batch_output_dir = '%s/%s_%s' % \
+                       (output_dir, batch_dir_prefix, batch_start_date_str)
+    if not os.path.isdir(batch_output_dir):
+        os.mkdir(batch_output_dir)
+
+    if verbose:
+        log_level = logging.DEBUG
+    else:
+        log_level = logging.INFO
+
+    if log_enabled:
+        logging.basicConfig(filename=output_dir + '/batch.log', level=log_level)
+    else:
+        logging.basicConfig(level=log_level)
+
+    return batch_output_dir, batch_start_date_str, daemonized, port, config_filename, verbose
+
+def run(config, datafiles, verbose):
+    numpy_rng = numpy.random.RandomState(config["seed"])
+
     results = []
     for run in range(config["runs"]):
         try:

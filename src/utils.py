@@ -27,11 +27,7 @@ All rights reserved.
 import numpy
 from scipy.spatial import distance
 import os
-import sys
-import getopt
-import json
-import logging
-import datetime
+
 import gzip
 from scipy import stats
 import theano
@@ -187,53 +183,7 @@ def find_unique_classes(dbn_output):
 def usage():
     print("--help usage summary")
     print("--config=filename configuration file")
-    print("--output=filename output file")
+    print("--daemon listen for a JSON config")
+    print("--port=port change the default listening port")
+    print("--log=filename output file")
     print("--verbose print additional information during training")
-
-def init(argv, batch_dir_prefix, config_filename, output_dir='MDBN_run', config_dir='config'):
-    log_enabled = False
-    verbose = False
-
-    try:
-        opts, args = getopt.getopt(argv, "hc:lv", ["help", "config=", "log", "verbose"])
-    except getopt.GetoptError:
-        usage()
-        sys.exit(2)
-    for opt, arg in opts:
-        if opt in ("-h", "--help"):
-            usage()
-            sys.exit()
-        elif opt in ("-v", "--verbose"):
-            verbose = True
-        elif opt in ("-c", "--config"):
-            config_filename = arg
-        elif opt in ("-l", "--log"):
-            log_enabled = True
-
-    with open('%s/%s' % (config_dir, config_filename)) as config_file:
-        config = json.load(config_file)
-
-    numpy_rng = numpy.random.RandomState(config["seed"])
-
-    batch_start_date = datetime.datetime.now()
-    batch_start_date_str = batch_start_date.strftime("%Y-%m-%d_%H%M")
-
-    if not os.path.isdir(output_dir):
-        os.mkdir(output_dir)
-
-    batch_output_dir = '%s/%s_%s' % \
-                       (output_dir, batch_dir_prefix, batch_start_date_str)
-    if not os.path.isdir(batch_output_dir):
-        os.mkdir(batch_output_dir)
-
-    if verbose:
-        log_level = logging.DEBUG
-    else:
-        log_level = logging.INFO
-
-    if log_enabled:
-        logging.basicConfig(filename=output_dir + '/batch.log', level=log_level)
-    else:
-        logging.basicConfig(level=log_level)
-
-    return batch_output_dir, batch_start_date_str, config, numpy_rng, verbose
