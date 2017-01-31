@@ -265,6 +265,7 @@ class RBM(object):
     def get_cost_updates(self,
                          lr=0.1,
                          k=1,
+                         p=0.5,
                          lambdas= [0.0, 0.0],
                          weightcost = 0.0,
                          batch_size=None,
@@ -302,6 +303,11 @@ class RBM(object):
         self.Wt = self.W.T
         # compute values for the positive phase
         pre_sigmoid_ph, ph_mean, ph_sample = self.sample_h_given_v(self.input)
+        r_sample = self.theano_rng.binomial(size=ph_mean.shape,
+                                            n=1, p=p,
+                                            dtype=theano.config.floatX)
+        ph_mean = ph_mean * r_sample
+        ph_sample = ph_sample * r_sample
 
         # decide how to initialize persistent chain:
         # for CD, we use the newly generate hidden sample
@@ -354,7 +360,7 @@ class RBM(object):
         # constructs the update dictionary
         multipliers = [
             # Issue: it returns Inf when Wij is small, therefore a small constant is added
-            (1 - 2 * lr * lambdas[1]) / (1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)),
+            p*(1 - 2 * lr * lambdas[1]) / (1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)),
             1,1]
 
         for gradient, param, multiplier, param_speed in zip(
