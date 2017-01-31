@@ -202,7 +202,8 @@ class DBN(object):
                     n_hidden=self.stacked_layers_sizes[layer],
                     W=sigmoid_layer.W,
                     hbias=sigmoid_layer.b,
-                    vbias=theano.shared(c, name='vbias', borrow=True))
+                    vbias=theano.shared(c, name='vbias', borrow=True),
+                    p=0.5)
             else:
                 rbm_layer = RBM(
                     name='%s.%i' % (name,layer),
@@ -213,7 +214,8 @@ class DBN(object):
                     n_hidden=self.stacked_layers_sizes[layer],
                     W=sigmoid_layer.W,
                     hbias=sigmoid_layer.b,
-                    vbias=theano.shared(c, name='vbias', borrow=True))
+                    vbias=theano.shared(c, name='vbias', borrow=True),
+                    p=0.5)
 
             self.params.extend(rbm_layer.params)
 

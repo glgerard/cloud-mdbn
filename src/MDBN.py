@@ -274,7 +274,10 @@ def load_network(input_file, input_folder):
     dbn_dict = {}
     for key in config['pathways']+["top"]:
         params=dbn_params[key]
-        netConfig = config[key]
+        if key != "top":
+            netConfig = config['dbns'][key]
+        else:
+            netConfig = config['top']
         layer_sizes = netConfig['layersNodes']
         dbn_dict[key] = DBN(n_ins=netConfig['inputNodes'],
                             hidden_layers_sizes=layer_sizes[:-1],

@@ -55,6 +55,7 @@ class RBM(object):
         W=None,
         hbias=None,
         vbias=None,
+        p=1.0,
         numpy_rng=None,
         theano_rng=None
     ):
@@ -85,6 +86,7 @@ class RBM(object):
         self.name = name
         self.n_visible = n_visible
         self.n_hidden = n_hidden
+        self.p = p
 
         if numpy_rng is None:
             # create a number generator
@@ -217,6 +219,11 @@ class RBM(object):
         h1_sample = self.theano_rng.binomial(size=h1_mean.shape,
                                              n=1, p=h1_mean,
                                              dtype=theano.config.floatX)
+        r_sample = self.theano_rng.binomial(size=h1_mean.shape,
+                                            n=1, p=self.p,
+                                            dtype=theano.config.floatX)
+        h1_mean = h1_mean * r_sample
+        h1_sample = h1_sample * r_sample
         return [pre_sigmoid_h1, h1_mean, h1_sample]
 
     def propdown(self, hid):
@@ -250,7 +257,7 @@ class RBM(object):
         ''' This function implements one step of Gibbs sampling,
             starting from the hidden state'''
         pre_sigmoid_v1, v1_mean, v1_sample = self.sample_v_given_h(h0_sample)
-        pre_sigmoid_h1, h1_mean, h1_sample = self.sample_h_given_v(v1_sample)
+        pre_sigmoid_h1, h1_mean, h1_sample = self.sample_h_given_v(v1_sample, p)
         return [pre_sigmoid_v1, v1_mean, v1_sample,
                 pre_sigmoid_h1, h1_mean, h1_sample]
 
@@ -265,7 +272,6 @@ class RBM(object):
     def get_cost_updates(self,
                          lr=0.1,
                          k=1,
-                         p=0.5,
                          lambdas= [0.0, 0.0],
                          weightcost = 0.0,
                          batch_size=None,
@@ -303,11 +309,6 @@ class RBM(object):
         self.Wt = self.W.T
         # compute values for the positive phase
         pre_sigmoid_ph, ph_mean, ph_sample = self.sample_h_given_v(self.input)
-        r_sample = self.theano_rng.binomial(size=ph_mean.shape,
-                                            n=1, p=p,
-                                            dtype=theano.config.floatX)
-        ph_mean = ph_mean * r_sample
-        ph_sample = ph_sample * r_sample
 
         # decide how to initialize persistent chain:
         # for CD, we use the newly generate hidden sample
@@ -360,7 +361,7 @@ class RBM(object):
         # constructs the update dictionary
         multipliers = [
             # Issue: it returns Inf when Wij is small, therefore a small constant is added
-            p*(1 - 2 * lr * lambdas[1]) / (1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)),
+            (1 - 2 * lr * lambdas[1]) / (1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)) / self.p,
             1,1]
 
         for gradient, param, multiplier, param_speed in zip(
@@ -754,11 +755,12 @@ class GRBM(RBM):
                  W=None,
                  hbias=None,
                  vbias=None,
+                 p=1.0,
                  numpy_rng=None,
                  theano_rng=None,
                  error_free=True):
         super(GRBM, self).__init__(name, input, n_visible, n_hidden,
-                                   W, hbias, vbias, numpy_rng, theano_rng)
+                                   W, hbias, vbias, p, numpy_rng, theano_rng)
         self.error_free = error_free
 
     def sample_v_given_h(self, h0_sample):
