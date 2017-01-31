@@ -212,6 +212,11 @@ class RBM(object):
         # compute the activation of the hidden units given a sample of
         # the visibles
         pre_sigmoid_h1, h1_mean = self.propup(v0_sample)
+        r_sample = self.theano_rng.binomial(size=h1_mean.shape,
+                                            n=1, p=self.p,
+                                            dtype=theano.config.floatX)
+        h1_mean = h1_mean * r_sample
+
         # get a sample of the hiddens given their activation
         # Note that theano_rng.binomial returns a symbolic sample of dtype
         # int64 by default. If we want to keep our computations in floatX
@@ -219,11 +224,7 @@ class RBM(object):
         h1_sample = self.theano_rng.binomial(size=h1_mean.shape,
                                              n=1, p=h1_mean,
                                              dtype=theano.config.floatX)
-        r_sample = self.theano_rng.binomial(size=h1_mean.shape,
-                                            n=1, p=self.p,
-                                            dtype=theano.config.floatX)
-        h1_mean = h1_mean * r_sample
-        h1_sample = h1_sample * r_sample
+
         return [pre_sigmoid_h1, h1_mean, h1_sample]
 
     def propdown(self, hid):
@@ -257,7 +258,7 @@ class RBM(object):
         ''' This function implements one step of Gibbs sampling,
             starting from the hidden state'''
         pre_sigmoid_v1, v1_mean, v1_sample = self.sample_v_given_h(h0_sample)
-        pre_sigmoid_h1, h1_mean, h1_sample = self.sample_h_given_v(v1_sample, p)
+        pre_sigmoid_h1, h1_mean, h1_sample = self.sample_h_given_v(v1_sample)
         return [pre_sigmoid_v1, v1_mean, v1_sample,
                 pre_sigmoid_h1, h1_mean, h1_sample]
 
@@ -361,7 +362,7 @@ class RBM(object):
         # constructs the update dictionary
         multipliers = [
             # Issue: it returns Inf when Wij is small, therefore a small constant is added
-            (1 - 2 * lr * lambdas[1]) / (1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)) / self.p,
+            (1 - 2 * lr * lambdas[1]) / (1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)),
             1,1]
 
         for gradient, param, multiplier, param_speed in zip(
@@ -627,6 +628,7 @@ class RBM(object):
             plotting_stop = timeit.default_timer()
             plotting_time += (plotting_stop - plotting_start)
 
+        self.W = self.W / self.p
         end_time = timeit.default_timer()
 
         pretraining_time = (end_time - start_time) - plotting_time
