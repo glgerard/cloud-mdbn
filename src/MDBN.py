@@ -298,7 +298,7 @@ def init(argv, batch_dir_prefix, config_filename, output_dir='MDBN_run'):
     port = 5000
 
     try:
-        opts, args = getopt.getopt(argv, "hc:dl:p:v", ["help", "config=", "daemon", "log=", "port=", "verbose"])
+        opts, args = getopt.getopt(argv, "hc:dlp:v", ["help", "config=", "daemon", "log", "port=", "verbose"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -349,6 +349,9 @@ def init(argv, batch_dir_prefix, config_filename, output_dir='MDBN_run'):
     return daemonized, port, config_filename, verbose
 
 def run(config, datafiles, verbose):
+    config_hash = md5(str(config.values())).hexdigest()
+    mdbnlogging.info("CONFIG_UUID:%s" % config_hash)
+
     numpy_rng = numpy.random.RandomState(config["seed"])
 
     results = []

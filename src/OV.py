@@ -47,14 +47,12 @@ def run_net(uuid):
     return uuid
 
 def main(argv, batch_dir_prefix='OV_Batch', config_filename='ov_config.json'):
-    config_dir = 'config'
-
     daemonized, port, config_filename, verbose = \
         MDBN.init(argv, batch_dir_prefix, config_filename)
 
     print (batch_output_dir)
     if not daemonized:
-        with open('%s/%s' % (config_dir, config_filename)) as config_file:
+        with open('%s' % config_filename) as config_file:
             config = json.load(config_file)
             datafiles = prepare_OV_TCGA_datafiles(config)
             MDBN.run(config, datafiles, verbose)
