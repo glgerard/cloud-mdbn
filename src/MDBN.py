@@ -175,16 +175,16 @@ def train_MDBN(datafiles,
             with open(dump_file, 'wb') as f:
                 cPickle.dump(dbn_dict[pathway], f, protocol=cPickle.HIGHEST_PROTOCOL)
 
-        for layer in range(dbn_dict[pathway].n_layers):
-            rbm = dbn_dict[pathway].rbm_layers[layer]
-            mdbnlogging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
-                             (run, rbm.name, layer, rbm.training_end_state[0], rbm.training_end_state[1]))
-
         output_t, output_v = dbn_dict[pathway].MLP_output_from_datafile(datafiles[pathway],
                                                                     holdout=holdout,
                                                                     repeats=repeats)
         output_t_list.append(output_t)
         output_v_list.append(output_v)
+
+        for layer in range(dbn_dict[pathway].n_layers):
+            rbm = dbn_dict[pathway].rbm_layers[layer]
+            mdbnlogging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
+                             (run, rbm.name, layer, rbm.training_end_state[0], rbm.training_end_state[1]))
 
     mdbnlogging.info('RUN:%i:DBN:top:start training' % run)
 
@@ -221,23 +221,23 @@ def train_MDBN(datafiles,
         with open(dump_file, 'wb') as f:
             cPickle.dump(dbn_dict['top'], f, protocol=cPickle.HIGHEST_PROTOCOL)
 
-    # Identifying the classes
+    # Computing the top-level output
 
-    dbn_output_list = []
+    unimodal_dbn_output_list = []
     for pathway in config["pathways"]:
         dbn_output, _ = dbn_dict[pathway].MLP_output_from_datafile(datafiles[pathway])
-        dbn_output_list.append(dbn_output)
+        unimodal_dbn_output_list.append(dbn_output)
 
-    joint_output = theano.shared(numpy.hstack(dbn_output_list), borrow=True)
+    joint_layer = theano.shared(numpy.hstack(unimodal_dbn_output_list), borrow=True)
 
-    classes = dbn_dict['top'].get_output(joint_output)
+    final_outuput = dbn_dict['top'].get_output(joint_layer)
 
-    save_network(classes, config, dbn_dict,
+    save_network(final_outuput, config, dbn_dict,
                  holdout, network_file, output_folder, repeats)
 
-    return classes
+    return final_outuput
 
-def save_network(classes, config, dbn_dict, holdout, network_file, output_folder, repeats):
+def save_network(top_output, config, dbn_dict, holdout, network_file, output_folder, repeats):
     if not os.path.isdir(output_folder):
         os.makedirs(output_folder)
     root_dir = os.getcwd()
@@ -257,7 +257,7 @@ def save_network(classes, config, dbn_dict, holdout, network_file, output_folder
                 holdout=holdout,
                 repeats=repeats,
                 config=config,
-                classes=classes,
+                classes=top_output,
                 dbn_params=dbn_params
                 )
     os.chdir(root_dir)
