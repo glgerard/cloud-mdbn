@@ -28,8 +28,7 @@ from __future__ import print_function, division
 
 import timeit
 import sys
-import os
-import logging
+import mdbnlogging
 
 import matplotlib.pyplot as plt
 
@@ -157,9 +156,9 @@ class DBN(object):
             n_in = input_size
             n_out= self.stacked_layers_sizes[layer]
 
-            logging.debug('DBN:%s:Adding layer:%i' % (name, layer))
-            logging.debug('DBN:%s:layer:%i:input:%i' % (name, layer, n_in))
-            logging.debug('DBN:%s:layer:%i:output:%i' % (name, layer, n_out))
+            mdbnlogging.debug('DBN:%s:Adding layer:%i' % (name, layer))
+            mdbnlogging.debug('DBN:%s:layer:%i:input:%i' % (name, layer, n_in))
+            mdbnlogging.debug('DBN:%s:layer:%i:output:%i' % (name, layer, n_out))
 
             if W_list is None:
                 W = numpy.asarray(numpy_rng.uniform(
@@ -400,11 +399,11 @@ class DBN(object):
         :return:
         '''
 
-        logging.debug('RUN:%i:DBN:%s:generating the training functions' % (run, self.name))
-        logging.info('RUN:%i:DBN:%s:training set sample size:%i' %
+        mdbnlogging.debug('RUN:%i:DBN:%s:generating the training functions' % (run, self.name))
+        mdbnlogging.info('RUN:%i:DBN:%s:training set sample size:%i' %
                      (run,self.name,train_set_x.get_value().shape[0]))
         if validation_set_x is not None:
-            logging.info('RUN:%i:DBN:%s:validation set sample size:%i' %
+            mdbnlogging.info('RUN:%i:DBN:%s:validation set sample size:%i' %
                          (run,self.name,validation_set_x.get_value().shape[0]))
 
         training_fns, free_energy_gap_fns = self.training_functions(train_set_x=train_set_x,
@@ -414,7 +413,7 @@ class DBN(object):
                                                                     persistent=persistent,
                                                                     monitor=monitor)
 
-        logging.debug('RUN:%i:DBN:%s:start training' % (run, self.name))
+        mdbnlogging.debug('RUN:%i:DBN:%s:start training' % (run, self.name))
         start_time = timeit.default_timer()
         # train layer-wise
 
@@ -438,7 +437,7 @@ class DBN(object):
 
         n_train_batches = idx_minibatches[-1] + 1
 
-        logging.debug('RUN:%i:DBN:%s:number of training batches:%d' %
+        mdbnlogging.debug('RUN:%i:DBN:%s:number of training batches:%d' %
                       (run, self.name, n_train_batches))
 
         for layer in range(self.n_layers):
@@ -479,7 +478,7 @@ class DBN(object):
                 meanCost = -numpy.mean(costs)
 
                 if meanCost < minCost:
-                    logging.debug('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
+                    mdbnlogging.debug('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
                                      (run, rbm_name, layer, epoch, meanCost))
                     minCost = meanCost
                     bestEpoch = epoch
@@ -512,10 +511,10 @@ class DBN(object):
                                         input_v_set)
                     free_energy_gap = free_energy_test.mean() - free_energy_train.mean()
 
-                    logging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:free energy gap:%f' %
+                    mdbnlogging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:free energy gap:%f' %
                                  (run, rbm_name, layer, epoch, free_energy_gap))
 
-            logging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
+            mdbnlogging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
                          (run, rbm_name, layer, bestEpoch, minCost))
             self.rbm_layers[layer].W = theano.shared(numpy.asarray(bestParams['W'],dtype=theano.config.floatX))
             self.rbm_layers[layer].hbias = theano.shared(numpy.asarray(bestParams['hbias'], dtype=theano.config.floatX))
@@ -527,7 +526,7 @@ class DBN(object):
 
         end_time = timeit.default_timer()
 
-        logging.debug('RUN:%i:DBN:%s:the training code ran for:%.2fm' %
+        mdbnlogging.debug('RUN:%i:DBN:%s:the training code ran for:%.2fm' %
                      (run,self.name,((end_time - start_time) / 60.)))
 
     def MLP_output_from_datafile(self,
