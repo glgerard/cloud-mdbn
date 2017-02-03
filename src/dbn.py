@@ -456,6 +456,8 @@ class DBN(object):
 
             minCost = numpy.inf
             bestEpoch = 0
+            count = 0
+            runningAverageCost = 0
 
             while epoch < pretraining_epochs[layer]:
                 epoch = epoch + 1
@@ -476,10 +478,13 @@ class DBN(object):
                                                    batch_size=len(minibatch)))
 
                 meanCost = -numpy.mean(costs)
+                runningCost = count * runningAverageCost + meanCost
+                count = count + len(costs)
+                runningAverageCost = runningCost / count
 
                 if meanCost < minCost:
-                    mdbnlogging.debug('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
-                                     (run, rbm_name, layer, epoch, meanCost))
+                    mdbnlogging.debug('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f:running average:%f' %
+                                     (run, rbm_name, layer, epoch, meanCost, runningAverageCost))
                     minCost = meanCost
                     bestEpoch = epoch
                     bestParams = dict()
@@ -514,8 +519,8 @@ class DBN(object):
                     mdbnlogging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:free energy gap:%f' %
                                  (run, rbm_name, layer, epoch, free_energy_gap))
 
-            mdbnlogging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f' %
-                         (run, rbm_name, layer, bestEpoch, minCost))
+            mdbnlogging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f:running average:%f' %
+                         (run, rbm_name, layer, bestEpoch, minCost, runningAverageCost))
             self.rbm_layers[layer].W = theano.shared(numpy.asarray(bestParams['W'],dtype=theano.config.floatX))
             self.rbm_layers[layer].hbias = theano.shared(numpy.asarray(bestParams['hbias'], dtype=theano.config.floatX))
             self.rbm_layers[layer].vbias = theano.shared(numpy.asarray(bestParams['vbias'], dtype=theano.config.floatX))
