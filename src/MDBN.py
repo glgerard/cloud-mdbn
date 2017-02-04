@@ -51,7 +51,8 @@ def train_dbn(train_set, validation_set,
               name="",
               gauss=True,
               batch_size=20,
-              k=1, layers_sizes=[40],
+              k=1, p=0.5,
+              layers_sizes=[40],
               pretraining_epochs=[800],
               pretrain_lr=[0.005],
               lambdas = [0.01, 0.1],
@@ -64,6 +65,7 @@ def train_dbn(train_set, validation_set,
     mdbnlogging.info('RUN:%i:DBN:%s:visible nodes:%i' % (run, name, train_set.get_value().shape[1]))
     mdbnlogging.info('RUN:%i:DBN:%s:output nodes:%i' % (run, name, layers_sizes[-1]))
     dbn = DBN(name=name, numpy_rng=rng, n_ins=train_set.get_value().shape[1],
+              p=p,
               gauss=gauss,
               hidden_layers_sizes=layers_sizes[:-1],
               n_outs=layers_sizes[-1])
@@ -150,7 +152,7 @@ def train_MDBN(datafiles,
         netConfig = config['dbns'][pathway]
         netConfig['inputNodes'] = train_set.get_value().shape[1]
 
-        config_hash = md5(str(netConfig.values())).hexdigest()
+        config_hash = md5(str(netConfig.values()+[config['seed'],config['p']])).hexdigest()
 
         dump_file = '%s/dbn_%s_%s_%d.save' % (tmp_folder, pathway, config_hash, run)
         if os.path.isfile(dump_file):
@@ -163,6 +165,7 @@ def train_MDBN(datafiles,
                 gauss=True,
                 batch_size=netConfig["batchSize"],
                 k=netConfig["k"],
+                p=config["p"],
                 layers_sizes=netConfig["layersNodes"],
                 pretraining_epochs=netConfig["epochs"],
                 pretrain_lr=netConfig["lr"],
@@ -198,7 +201,7 @@ def train_MDBN(datafiles,
     netConfig = config['top']
     netConfig['inputNodes'] = joint_train_set.get_value().shape[1]
 
-    config_hash = md5(str(config)).hexdigest()
+    config_hash = md5(str(config.values())).hexdigest()
 
     dump_file = 'tmp/dbn_top_%s_%d.save' % (config_hash, run)
     if os.path.isfile(dump_file):
@@ -210,6 +213,7 @@ def train_MDBN(datafiles,
                                           gauss=False,
                                           batch_size=netConfig["batchSize"],
                                           k=netConfig["k"],
+                                          p=config["p"],
                                           layers_sizes=netConfig["layersNodes"],
                                           pretraining_epochs=netConfig["epochs"],
                                           pretrain_lr=netConfig["lr"],

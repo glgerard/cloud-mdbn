@@ -5,10 +5,7 @@ import csv
 import copy
 from ast import literal_eval
 
-def main(argv):
-    configCsvFile = argv[0]
-    configJsonFile = argv[1]
-
+def csvToConfig(configCsvFile, configJsonFile, callback_fn):
     with open(configJsonFile,'r') as jsonfile:
         templateConfig = json.load(jsonfile)
 
@@ -16,8 +13,6 @@ def main(argv):
     with open(configCsvFile, 'r') as csvfile:
         csvreader = csv.DictReader(csvfile, delimiter=',')
         for row in csvreader:
-            print(row)
-
             config = copy.deepcopy(templateConfig)
 
             config["seed"] = literal_eval(row["seed"])
@@ -27,7 +22,6 @@ def main(argv):
 
             for net in config['dbns'].keys()+['top']:
                 lcNet = net.lower()
-                print(literal_eval(row[lcNet+'.active']))
                 if literal_eval(row[lcNet+'.active']):
                     if net != 'top':
                         pathways.append(net)
@@ -47,10 +41,13 @@ def main(argv):
                             except:
                                 netConfig[key] = row[colL2]
             config['pathways'] = pathways
-            with open(row['config_file'], 'w') as f:
-                json.dump(config, f, indent=4, sort_keys=True)
+            callback_fn(config, row['config_file'])
 
     return
 
+def write_config(config, configFile):
+    with open(configFile, 'w') as f:
+        json.dump(config, f, indent=4, sort_keys=True)
+
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    csvToConfig(sys.argv[1], sys.argv[2], write_config)

@@ -62,6 +62,7 @@ class DBN(object):
     """
 
     def __init__(self, name="", numpy_rng=None, theano_rng=None, n_ins=784,
+                 p=0.5,
                  gauss=True,
                  hidden_layers_sizes=[400], n_outs=40,
                  W_list=None, b_list=None, c_list=None):
@@ -77,6 +78,9 @@ class DBN(object):
 
         :type n_ins: int
         :param n_ins: dimension of the input to the DBN
+
+        :type p: float
+        :param p: percentage of hidden units to retain for the dropout algorithm
 
         :type gauss: bool
         :param gauss: True if the first layer is Gaussian otherwise
@@ -202,7 +206,7 @@ class DBN(object):
                     W=sigmoid_layer.W,
                     hbias=sigmoid_layer.b,
                     vbias=theano.shared(c, name='vbias', borrow=True),
-                    p=0.5)
+                    p=p)
             else:
                 rbm_layer = RBM(
                     name='%s.%i' % (name,layer),
@@ -214,7 +218,7 @@ class DBN(object):
                     W=sigmoid_layer.W,
                     hbias=sigmoid_layer.b,
                     vbias=theano.shared(c, name='vbias', borrow=True),
-                    p=0.5)
+                    p=p)
 
             self.params.extend(rbm_layer.params)
 
@@ -478,7 +482,7 @@ class DBN(object):
                                                    batch_size=len(minibatch)))
 
                 meanCost = -numpy.mean(costs)
-                runningCost = count * runningAverageCost + meanCost
+                runningCost = count * runningAverageCost + len(costs) * meanCost
                 count = count + len(costs)
                 runningAverageCost = runningCost / count
 

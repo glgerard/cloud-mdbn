@@ -3,6 +3,7 @@ import sys
 import zipfile
 import urllib
 import json
+import requests
 
 from flask import Flask
 from flask import request
@@ -13,6 +14,9 @@ import MDBN
 
 batch_output_dir = ''
 batch_start_date_str = ''
+BUSY = 10
+FREE = 0
+netStatus = FREE
 verbose = False
 
 def prepare_OV_TCGA_datafiles(config, datadir='data'):
@@ -38,13 +42,25 @@ def prepare_OV_TCGA_datafiles(config, datadir='data'):
     os.chdir(root_dir)
     return datafiles
 
-@app.route('/api/run_net/<uuid>', methods=['GET', 'POST'])
-def run_net(uuid):
-    config = request.json
-    datafiles = prepare_OV_TCGA_datafiles(config)
-    print(config)
-    MDBN.run(config, datafiles, verbose)
-    return uuid
+@app.route('/status')
+def statusCmd():
+    if netStatus == FREE:
+        print('ready')
+    else:
+        print('busy')
+    return
+
+@app.route('/run/<url>', methods=['GET', 'POST'])
+def runCmd(url):
+    if netStatus == FREE:
+        config = request.json
+        datafiles = prepare_OV_TCGA_datafiles(config)
+        print(config)
+        netStatus = BUSY
+        MDBN.run(config, datafiles, verbose)
+        netStatus = FREE
+        r = requests.post('http://%s:5000/job' % url, data="completed")
+    return
 
 def main(argv, batch_dir_prefix='OV_Batch', config_filename='ov_config.json'):
     daemonized, port, config_filename, verbose = \
@@ -57,7 +73,7 @@ def main(argv, batch_dir_prefix='OV_Batch', config_filename='ov_config.json'):
             datafiles = prepare_OV_TCGA_datafiles(config)
             MDBN.run(config, datafiles, verbose)
     else:
-        app.run(port=port, debug=False)
+        app.run(port=port, debug=False, threaded=True)
 
 if __name__ == '__main__':
     main(sys.argv[1:])
