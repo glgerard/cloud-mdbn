@@ -42,25 +42,29 @@ def prepare_OV_TCGA_datafiles(config, datadir='data'):
     os.chdir(root_dir)
     return datafiles
 
+def get_status():
+    return netStatus
+
+def set_status(s):
+    global netStatus
+    netStatus = s
+    return netStatus
+
 @app.route('/status')
 def statusCmd():
-    if netStatus == FREE:
-        print('ready')
-    else:
-        print('busy')
-    return
+    return 'ready' if get_status() == FREE else 'busy'
 
-@app.route('/run/<url>', methods=['GET', 'POST'])
-def runCmd(url):
-    if netStatus == FREE:
+@app.route('/run/<uuid>', methods=['POST'])
+def runCmd(uuid):
+    if get_status() == FREE:
         config = request.json
-        datafiles = prepare_OV_TCGA_datafiles(config)
         print(config)
-        netStatus = BUSY
+        set_status(BUSY)
+        print(get_status())
+        datafiles = prepare_OV_TCGA_datafiles(config)
         MDBN.run(config, datafiles, verbose)
-        netStatus = FREE
-        r = requests.post('http://%s:5000/job' % url, data="completed")
-    return
+        set_status(FREE)
+    return uuid
 
 def main(argv, batch_dir_prefix='OV_Batch', config_filename='ov_config.json'):
     daemonized, port, config_filename, verbose = \
@@ -73,7 +77,7 @@ def main(argv, batch_dir_prefix='OV_Batch', config_filename='ov_config.json'):
             datafiles = prepare_OV_TCGA_datafiles(config)
             MDBN.run(config, datafiles, verbose)
     else:
-        app.run(port=port, debug=False, threaded=True)
+        app.run(port=port, debug=False, threaded= True)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

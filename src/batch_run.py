@@ -1,28 +1,52 @@
+from __future__ import print_function
 import requests
 import sys
+from time import sleep
+from hashlib import md5
+import logging
+import traceback
 from csv_to_config import csvToConfig
 
 host = '127.0.0.1'
 port = 5000
-ip = '127.0.0.1'
 
-from flask import Flask
-from flask import request
+jobCompleted = False
 
-app = Flask('cloud-mdbn')
+def main(configCsvFile, configJsonFile):
+    try:
+        csvToConfig(configCsvFile, configJsonFile, send_config)
+    except Exception:
+        print(traceback.format_exc())
 
-@app('/')
-def statusCmd():
+def check_completion():
+    jobRunning = True
+    while jobRunning:
+        sleep(30)
+        r = requests.get('http://%s:%d/status' % (host, port))
+        if r.status_code == requests.codes.ok:
+            jobRunning = r.text == 'busy'
+        else:
+            r.raise_for_status()
     return
 
-def main(argv):
-    csvToConfig(argv[0], argv[1], send_config)
-
 def send_config(config, configFile = None):
-    r = requests.post('http://%s:%d/run/%s' % (host, port, ip), json=config)
-    while status==BUSY:
-        sleep(30)
+    try:
+        r = requests.get('http://%s:%d/status' % (host, port))
+        if r.status_code == requests.codes.ok:
+            if r.text == 'ready':
+                print(configFile)
+                uuid = md5(str(config.values())).hexdigest()
+                r = requests.post('http://%s:%d/run/%s' % (host, port, uuid),
+                                  json=config)
+                if r.status_code == requests.codes.ok:
+                    check_completion()
+                else:
+                    r.raise_for_status()
+        else:
+            r.raise_for_status()
+    except Exception as e:
+        print(e)
+        traceback.format_exc()
 
 if __name__ == '__main__':
-    app.run(port=port, debug=False, threaded=True)
-    main(sys.argv[1:])
+    main(sys.argv[1], sys.argv[2])

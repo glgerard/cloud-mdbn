@@ -385,7 +385,7 @@ def run(config, datafiles, verbose):
         except:
             logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[0]))
             logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[1]))
-            traceback.print_exc()
+            traceback.format_exc()
     root_dir = os.getcwd()
     os.chdir(batch_output_dir)
     numpy.savez('Results_%s.npz' % batch_start_date_str,
