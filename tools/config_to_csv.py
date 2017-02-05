@@ -12,6 +12,7 @@ def main(argv):
     print(configJsonFile, end=',')
     print(config["seed"],end=',')
     print(config["runs"],end=',')
+    print(config["p"],end=',')
 
     for net in config['dbns'].keys()+['top']:
         if net != 'top':

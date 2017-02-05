@@ -3,16 +3,60 @@ import requests
 import sys
 from time import sleep
 from hashlib import md5
-import logging
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
+from datetime import datetime
+import time
 import traceback
 from csv_to_config import csvToConfig
 
 host = '127.0.0.1'
 port = 5000
 
+# Local DynamoDB instance
+dynamodb_url="http://localhost:8000"
+region_name='eu-west-1'
+
 jobCompleted = False
 
 def main(configCsvFile, configJsonFile):
+    global table
+
+    client = boto3.client('dynamodb', region_name=region_name, endpoint_url=dynamodb_url)
+    list_tables = client.list_tables()
+    dynamodb = boto3.resource('dynamodb', region_name=region_name, endpoint_url=dynamodb_url)
+    if not 'jobs' in list_tables['TableNames']:
+        table = dynamodb.create_table(
+            TableName='jobs',
+            KeySchema=[
+                {
+                    'AttributeName': 'job',
+                    'KeyType': 'HASH'
+                },
+                {
+                    'AttributeName': 'date',
+                    'KeyType': 'RANGE'
+                }
+            ],
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'job',
+                    'AttributeType': 'S'
+                },
+                {
+                    'AttributeName': 'date',
+                    'AttributeType': 'N'
+                }
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 5,
+                'WriteCapacityUnits': 5
+            }
+        )
+        table.meta.client.get_waiter('table_exists').wait(TableName='jobs')
+    else:
+        table = dynamodb.Table('jobs')
+
     try:
         csvToConfig(configCsvFile, configJsonFile, send_config)
     except Exception:
@@ -30,12 +74,28 @@ def check_completion():
     return
 
 def send_config(config, configFile = None):
+    uuid = md5(str(config.values())).hexdigest()
+
+    response = table.query(
+        KeyConditionExpression=Key('job').eq(uuid)
+    )
+
+    done=False
+    for i in response['Items']:
+        done=True
+        print('Run already completed')
+        print('Date: ' + datetime.fromtimestamp(i['date']).strftime("%Y-%m-%d_%H%M"))
+
+    if done:
+        return
+
     try:
+        timestamp = time.time()
+
         r = requests.get('http://%s:%d/status' % (host, port))
         if r.status_code == requests.codes.ok:
             if r.text == 'ready':
                 print(configFile)
-                uuid = md5(str(config.values())).hexdigest()
                 r = requests.post('http://%s:%d/run/%s' % (host, port, uuid),
                                   json=config)
                 if r.status_code == requests.codes.ok:
@@ -44,6 +104,12 @@ def send_config(config, configFile = None):
                     r.raise_for_status()
         else:
             r.raise_for_status()
+        table.put_item(
+            Item={
+                'job': uuid,
+                'date': timestamp
+            }
+        )
     except Exception as e:
         print(e)
         traceback.format_exc()
