@@ -217,7 +217,6 @@ def train_MDBN(datafiles,
                                           layers_sizes=netConfig["layersNodes"],
                                           pretraining_epochs=netConfig["epochs"],
                                           pretrain_lr=netConfig["lr"],
-                                          lambdas=netConfig["lambdas"],
                                           rng=rng,
                                           persistent=netConfig["persistent"],
                                           run=run,
@@ -361,33 +360,35 @@ def run(config, datafiles, verbose):
 
     results = []
     for run in range(config["runs"]):
-        try:
-            run_start_date = datetime.datetime.now()
-            mdbnlogging.info('RUN:%i:start date:%s:start time:%s' % (run,
-                                                                     run_start_date.strftime("%Y.%m.%d"),
-                                                                     run_start_date.strftime("%H.%M.%S")))
-            dbn_output = train_MDBN(datafiles,
-                                    config,
-                                    output_folder=batch_output_dir,
-                                    network_file='Exp_%s_run_%d.npz' %
-                                                 (batch_start_date_str, run),
-                                    holdout=0.0, repeats=1,
-                                    run=run,
-                                    verbose=verbose,
-                                    rng=numpy_rng)
-            current_date_time = datetime.datetime.now()
-            classes = find_unique_classes((dbn_output > 0.5) * numpy.ones_like(dbn_output))
-            mdbnlogging.info('RUN:%i:classes identified:%d' % (run, numpy.max(classes[0])))
-            results.append(classes[0])
-            mdbnlogging.info('RUN:%i:stop date:%s:stop time:%s' % (run,
-                                                                   current_date_time.strftime("%Y.%m.%d"),
-                                                                   current_date_time.strftime("%H.%M.%S")))
-        except:
-            logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[0]))
-            logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[1]))
-            traceback.format_exc()
+#        try:
+        run_start_date = datetime.datetime.now()
+        mdbnlogging.info('RUN:%i:start date:%s:start time:%s' % (run,
+                                                                 run_start_date.strftime("%Y.%m.%d"),
+                                                                 run_start_date.strftime("%H.%M.%S")))
+        dbn_output = train_MDBN(datafiles,
+                                config,
+                                output_folder=batch_output_dir,
+                                network_file='Exp_%s_run_%d.npz' %
+                                             (batch_start_date_str, run),
+                                holdout=0.0, repeats=1,
+                                run=run,
+                                verbose=verbose,
+                                rng=numpy_rng)
+        current_date_time = datetime.datetime.now()
+        classes = find_unique_classes((dbn_output > 0.5) * numpy.ones_like(dbn_output))
+        mdbnlogging.info('RUN:%i:classes identified:%d' % (run, numpy.max(classes[0])))
+        results.append(classes[0])
+        mdbnlogging.info('RUN:%i:stop date:%s:stop time:%s' % (run,
+                                                               current_date_time.strftime("%Y.%m.%d"),
+                                                               current_date_time.strftime("%H.%M.%S")))
+#        except:
+#            logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[0]))
+#            logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[1]))
+#            traceback.format_exc()
     root_dir = os.getcwd()
     os.chdir(batch_output_dir)
     numpy.savez('Results_%s.npz' % batch_start_date_str,
                 results=results)
     os.chdir(root_dir)
+    len_classes = [len(classes) for classes in results]
+    return numpy.min(len_classes), numpy.median(len_classes), numpy.max(len_classes)

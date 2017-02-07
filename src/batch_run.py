@@ -7,6 +7,7 @@ import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from datetime import datetime
 import time
+import logging
 import traceback
 from csv_to_config import csvToConfig
 
@@ -34,7 +35,7 @@ def main(configCsvFile, configJsonFile):
                     'KeyType': 'HASH'
                 },
                 {
-                    'AttributeName': 'date',
+                    'AttributeName': 'n_classes',
                     'KeyType': 'RANGE'
                 }
             ],
@@ -44,7 +45,7 @@ def main(configCsvFile, configJsonFile):
                     'AttributeType': 'S'
                 },
                 {
-                    'AttributeName': 'date',
+                    'AttributeName': 'n_classes',
                     'AttributeType': 'N'
                 }
             ],
@@ -62,7 +63,7 @@ def main(configCsvFile, configJsonFile):
     except Exception:
         print(traceback.format_exc())
 
-def check_completion():
+def wait_job():
     jobRunning = True
     while jobRunning:
         sleep(30)
@@ -83,8 +84,8 @@ def send_config(config, configFile = None):
     done=False
     for i in response['Items']:
         done=True
-        print('Run already completed')
-        print('Date: ' + datetime.fromtimestamp(i['date']).strftime("%Y-%m-%d_%H%M"))
+        print('Run with UUID %s already completed with %s classes' % (uuid, i['n_classes']))
+        print('Date: ' + datetime.fromtimestamp(i['timestamp']).strftime("%Y-%m-%d_%H%M"))
 
     if done:
         return
@@ -95,23 +96,30 @@ def send_config(config, configFile = None):
         r = requests.get('http://%s:%d/status' % (host, port))
         if r.status_code == requests.codes.ok:
             if r.text == 'ready':
-                print(configFile)
+                print('JOB UUID: ' + uuid)
                 r = requests.post('http://%s:%d/run/%s' % (host, port, uuid),
                                   json=config)
                 if r.status_code == requests.codes.ok:
-                    check_completion()
+                    wait_job()
+                    r = requests.get('http://%s:%d/median/%s' % (host, port, uuid))
+                    if r.status_code == requests.codes.ok:
+                        n_classes = int(r.text)
+                        table.put_item(  # Add the completed job in DynamoDB
+                            Item={
+                                'job': uuid,
+                                'n_classes': n_classes,
+                                'timestamp': timestamp
+                            }
+                        )
+                    else:
+                        r.raise_for_status()
                 else:
                     r.raise_for_status()
         else:
             r.raise_for_status()
-        table.put_item(
-            Item={
-                'job': uuid,
-                'date': timestamp
-            }
-        )
-    except Exception as e:
-        print(e)
+    except:
+        logging.error('Unexpected error (%s): %s' % (uuid, sys.exc_info()[0]))
+        logging.error('Unexpected error (%s): %s' % (uuid, sys.exc_info()[1]))
         traceback.format_exc()
 
 if __name__ == '__main__':

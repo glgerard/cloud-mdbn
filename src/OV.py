@@ -3,7 +3,9 @@ import sys
 import zipfile
 import urllib
 import json
-import requests
+import logging
+import traceback
+from threading import Thread
 
 from flask import Flask
 from flask import request
@@ -14,9 +16,31 @@ import MDBN
 
 batch_output_dir = ''
 batch_start_date_str = ''
+
 BUSY = 10
 FREE = 0
-netStatus = FREE
+
+class jobDescription():
+    def __init__(self):
+        self.uuid = ''
+        self.status = FREE
+        self.min = 0
+        self.median = 0
+        self.max = 0
+
+    def get_status(self):
+        return self.status
+
+    def set_status(self, status, uuid, minimum=0, median=0, maximum=0):
+        self.uuid = uuid
+        self.status = status
+        self.min = minimum
+        self.median = median
+        self.max = maximum
+        return status
+
+jobStatus = jobDescription()
+
 verbose = False
 
 def prepare_OV_TCGA_datafiles(config, datadir='data'):
@@ -42,29 +66,58 @@ def prepare_OV_TCGA_datafiles(config, datadir='data'):
     os.chdir(root_dir)
     return datafiles
 
-def get_status():
-    return netStatus
-
-def set_status(s):
-    global netStatus
-    netStatus = s
-    return netStatus
+def start_run(uuid, config, verbose):
+    global jobStatus
+    jobStatus.set_status(BUSY, uuid)
+    datafiles = prepare_OV_TCGA_datafiles(config)
+    minimum, median, maximum = MDBN.run(config, datafiles, verbose)
+    jobStatus.set_status(FREE, uuid, minimum, median, maximum)
+    return 'job_completed'
 
 @app.route('/status')
 def statusCmd():
-    return 'ready' if get_status() == FREE else 'busy'
+    global jobStatus
+    return 'ready' if jobStatus.get_status() == FREE else 'busy'
 
 @app.route('/run/<uuid>', methods=['POST'])
 def runCmd(uuid):
-    if get_status() == FREE:
+    global jobStatus
+    if jobStatus.get_status() == FREE:
         config = request.json
-        print(config)
-        set_status(BUSY)
-        print(get_status())
-        datafiles = prepare_OV_TCGA_datafiles(config)
-        MDBN.run(config, datafiles, verbose)
-        set_status(FREE)
-    return uuid
+        try:
+            thread = Thread(target=start_run, args=(uuid, config, verbose))
+            thread.start()
+        except:
+            logging.error('Unexpected error (%s): %s' % (uuid, sys.exc_info()[0]))
+            logging.error('Unexpected error:(%s): %s' % (uuid, sys.exc_info()[1]))
+            traceback.format_exc()
+        return uuid, 202
+    else:
+        return uuid, 403
+
+@app.route('/median/<uuid>')
+def getMedian(uuid):
+    global jobStatus
+    if jobStatus.uuid == uuid and jobStatus.status == FREE:
+        return "%s" % jobStatus.median
+    else:
+        return "NA", 404
+
+@app.route('/min/<uuid>')
+def getMin(uuid):
+    global jobStatus
+    if jobStatus.uuid == uuid and jobStatus.status == FREE:
+        return "%s" % jobStatus.min
+    else:
+        return "NA", 404
+
+@app.route('/max/<uuid>')
+def getMax(uuid):
+    global jobStatus
+    if jobStatus.uuid == uuid and jobStatus.status == FREE:
+        return "%s" % jobStatus.max
+    else:
+        return "NA", 404
 
 def main(argv, batch_dir_prefix='OV_Batch', config_filename='ov_config.json'):
     daemonized, port, config_filename, verbose = \
@@ -77,7 +130,7 @@ def main(argv, batch_dir_prefix='OV_Batch', config_filename='ov_config.json'):
             datafiles = prepare_OV_TCGA_datafiles(config)
             MDBN.run(config, datafiles, verbose)
     else:
-        app.run(port=port, debug=False, threaded= True)
+        app.run(port=port, debug=False)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

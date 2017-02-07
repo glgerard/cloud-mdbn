@@ -33,6 +33,10 @@ from scipy import stats
 import theano
 
 def import_TCGA_data(file, datadir, dtype):
+    # Load the data, each column is originally a single person
+    # Return a row representation with the data for each person
+    # on a single row.
+
     root_dir = os.getcwd()
     os.chdir(datadir)
 
@@ -50,7 +54,7 @@ def import_TCGA_data(file, datadir, dtype):
                          usecols=range(1, ncols))
 
     os.chdir(root_dir)
-    return (data.shape[1], ncols - 1, data)
+    return (data.shape[1], data.T)
 
 
 def get_minibatches_idx(n, batch_size, rng=None):
@@ -79,26 +83,24 @@ def get_minibatches_idx(n, batch_size, rng=None):
 
 def load_n_preprocess_data(datafile,
                            dtype=theano.config.floatX,
-                           holdout=0.1,
+                           holdout=0.0,
                            clip=None,
                            transform_fn=None,
                            exponent=1.0,
-                           repeats=10,
+                           repeats=1,
                            rng=None,
                            datadir='data'):
-    # Load the data, each column is a single person
-    # Pass to a row representation, i.e. the data for each person is now on a
-    # single row.
-    # Normalize the data so that each measurement on our population has zero
-    # mean and zero variance
-    n_data, n_cols, data = import_TCGA_data(datafile, datadir, dtype)
+
+    n_data, data = import_TCGA_data(datafile, datadir, dtype)
 
     if transform_fn is not None:
         data = transform_fn(data, exponent)
 
-    zdata = stats.zscore(data, axis=1)
-    zdata1 = zdata[~numpy.isnan(zdata).any(axis=1)]
-    zdata = zdata1.T
+    # Normalize the data so that each measurement on our population has zero
+    # mean and zero variance
+    zdata = stats.zscore(data, axis=0)
+    not_nan_ix = ~numpy.isnan(zdata).any(axis=1)
+    zdata = zdata[not_nan_ix]
 
     if clip is not None:
         zdata = numpy.clip(zdata, clip[0], clip[1])
@@ -107,10 +109,10 @@ def load_n_preprocess_data(datafile,
     if repeats > 1:
         zdata = numpy.repeat(zdata, repeats=repeats, axis=0)
 
-    validation_set_size = int(n_cols * holdout)
+    validation_set_size = int(n_data * holdout)
 
     # pre shuffle the data if we have a validation set
-    _, indexes = get_minibatches_idx(n_cols, n_cols -
+    _, indexes = get_minibatches_idx(n_data, n_data -
                                      validation_set_size, rng=rng)
 
     train_set = theano.shared(zdata[indexes[0]], borrow=True)
