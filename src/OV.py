@@ -20,8 +20,8 @@ netStatus = FREE
 verbose = False
 
 def prepare_OV_TCGA_datafiles(config, datadir='data'):
-    base_url = 'http://nar.oxfordjournals.org/content/suppl/2012/07/25/gks725.DC1/'
-    archive = 'nar-00961-n-2012-File005.zip'
+    base_url = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3479191/bin/'
+    archive = 'supp_gks725_nar-00961-n-2012-File005.zip'
 
     datafiles = dict()
     for key in config["pathways"]:
