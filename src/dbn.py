@@ -62,7 +62,7 @@ class DBN(object):
     """
 
     def __init__(self, name="", numpy_rng=None, theano_rng=None, n_ins=784,
-                 p=0.5,
+                 p=1.0,
                  gauss=True,
                  hidden_layers_sizes=[400], n_outs=40,
                  W_list=None, b_list=None, c_list=None):
@@ -256,7 +256,9 @@ class DBN(object):
         else:
             return None
 
-    def training_functions(self, train_set_x, k,
+    def training_functions(self,
+                           train_set_x,
+                           k=1,
                            max_batch_size=20,
                            lambdas = [0.0, 0.1],
                            persistent=False,
@@ -288,6 +290,7 @@ class DBN(object):
         learning_rate = tensor.scalar('lr', dtype=theano.config.floatX)  # learning rate to use
 #        batch_size = tensor.iscalar('batch_size')
         momentum = tensor.scalar('momentum', dtype=theano.config.floatX)
+        weightcost = tensor.scalar('weigthcost', dtype=theano.config.floatX)
 
         train_fns = []
         free_energy_gap_fns = []
@@ -306,13 +309,15 @@ class DBN(object):
             # get the cost and the updates list
             if isinstance(rbm, GRBM):
                 cost, updates = rbm.get_cost_updates(learning_rate,
+                                                     weightcost,
                                                      lambdas=lambdas,
 #                                                     batch_size=batch_size,
                                                      persistent=persistent_chain[i],
                                                      k=k)
             else:
                 cost, updates = rbm.get_cost_updates(learning_rate,
-                                                     weightcost = 0.0002,
+                                                     momentum,
+                                                     weightcost,
 #                                                     batch_size=batch_size,
                                                      persistent=persistent_chain[i],
                                                      k=k)
@@ -326,23 +331,25 @@ class DBN(object):
             if isinstance(rbm, GRBM):
                 fn = theano.function(
 #                    inputs=[indexes, theano.In(learning_rate), theano.In(batch_size)],
-                    inputs=[indexes, theano.In(learning_rate)],
+                    inputs=[indexes, learning_rate, theano.In(weightcost, value=0.0)],
                     outputs=cost,
                     updates=updates,
                     givens={
-                        self.x: train_set_x[indexes]                    },
+                        self.x: train_set_x[indexes]
+                    },
                     mode=mode
                     #           mode=NanGuardMode(nan_is_error=True, inf_is_error=True, big_is_error=True)
                 )
             else:
                 fn = theano.function(
 #                    inputs=[indexes, momentum, theano.In(learning_rate), theano.In(batch_size)],
-                    inputs=[indexes, momentum, theano.In(learning_rate)],
+                    inputs=[indexes, learning_rate, momentum,
+                            theano.In(weightcost, value=0.0002)],
                     outputs=cost,
                     updates=updates,
                     givens={
-                            self.x: train_set_x[indexes],
-                            rbm.momentum: momentum
+                            self.x: train_set_x[indexes]
+#                            rbm.momentum: momentum
                     },
                     mode = mode
     #           mode=NanGuardMode(nan_is_error=True, inf_is_error=True, big_is_error=True)
@@ -461,10 +468,7 @@ class DBN(object):
             if graph_output:
                 plt.figure(layer+1)
 
-            if isinstance(self.rbm_layers[layer], GRBM):
-                momentum = 0.0
-            else:
-                momentum = 0.6
+            momentum = 0.6
 
             rbm_name = self.rbm_layers[layer].name
 
@@ -484,19 +488,19 @@ class DBN(object):
                                                                    self.numpy_rng)
 
                 # go through the training set
-                if not isinstance(self.rbm_layers[layer], GRBM) and epoch == 6:
+                if epoch == 6:
                     momentum = 0.9
 
                 costs=[]
                 for mb, minibatch in enumerate(minibatches):
                     if isinstance(self.rbm_layers[layer], GRBM):
                         costs.append(training_fns[layer](indexes=minibatch,
-                                                       lr=pretrain_lr[layer]))
+                                                         lr=pretrain_lr[layer]))
 #                                                       batch_size=len(minibatch)))
                     else:
                         costs.append(training_fns[layer](indexes=minibatch,
-                                                       momentum=momentum,
-                                                       lr=pretrain_lr[layer]))
+                                                         lr=pretrain_lr[layer],
+                                                         momentum=momentum))
 #                                                       batch_size=len(minibatch)))
 
                 meanCost = numpy.mean(costs)

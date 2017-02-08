@@ -157,7 +157,7 @@ class RBM(object):
         # See: Hinton, "A Practical Guide to Training Restricted Boltzmann Machines",
         # UTML TR 2010-003, 2010. Section 9
 
-        self.momentum = tensor.cast(0, dtype=theano.config.floatX)
+#        self.momentum = tensor.cast(0, dtype=theano.config.floatX)
 
         self.W_speed = theano.shared(
             numpy.zeros((n_visible, n_hidden), dtype=theano.config.floatX),
@@ -271,10 +271,10 @@ class RBM(object):
                 pre_sigmoid_v1, v1_mean, v1_sample]
 
     def get_cost_updates(self,
-                         lr=0.1,
+                         lr,
+                         momentum,
+                         weightcost,
                          k=1,
-                         weightcost = 0.0,
-                         batch_size=None,
                          persistent=None,
                          automated_grad=False
                          ):
@@ -350,18 +350,20 @@ class RBM(object):
         if automated_grad:
             gradients = self.compute_symbolic_grad(chain_end)
         else:
-            gradients = self.compute_rbm_grad(batch_size, ph_mean, nh_means[-1], nv_means[-1],
+            gradients = self.compute_rbm_grad(ph_mean, nh_means[-1], nv_means[-1],
                                               weightcost)
 
         for gradient, param, param_speed in zip(
                 gradients, self.params, self.params_speed):
             # make sure that the momentum is of the right dtype
-            updates[param_speed] = gradient * \
-                                   tensor.cast(lr, dtype=theano.config.floatX) + \
-                                   param_speed * \
-                                   tensor.cast(self.momentum, dtype=theano.config.floatX)
             # make sure that the learning rate is of the right dtype
-            updates[param] = param + param_speed
+            updates[param] = param + param_speed * \
+                                   tensor.cast(lr, dtype=theano.config.floatX)
+
+            updates[param_speed] = param_speed * \
+                                   tensor.cast(momentum, dtype=theano.config.floatX) + \
+                                   gradient * \
+                                   (1.0 - tensor.cast(momentum, dtype=theano.config.floatX))
 
         if persistent:
             # Note that this works only if persistent is a shared variable
@@ -388,7 +390,7 @@ class RBM(object):
         gradients = tensor.grad(cost, self.params, consider_constant=[chain_end])
         return gradients
 
-    def compute_rbm_grad(self, batch_size, ph_mean, nh_mean, nv_mean, weightcost=0.0):
+    def compute_rbm_grad(self, ph_mean, nh_mean, nv_mean, weightcost):
         """
         Compute the gradient of the log-likelihood for an RBM with respect
         to the parameters self.params using the expectations.
@@ -407,15 +409,9 @@ class RBM(object):
                         Boltzmann Machines" (2010))
         :return: a list with the gradients for each parameter in self.params
         """
-#        W_grad = (tensor.dot(self.input.T, ph_mean) -
-#                  tensor.dot(nv_mean.T, nh_mean)) / \
-#                 tensor.cast(batch_size, dtype=theano.config.floatX) - \
-#                 tensor.cast(weightcost, dtype=theano.config.floatX) * \
-#                 self.W.get_value(borrow=True)
-        W_grad = tensor.mean(tensor.tensordot(self.input.T, ph_mean,0) -
+        W_grad = tensor.mean(tensor.tensordot(self.input.T, ph_mean, 0) -
                   tensor.tensordot(nv_mean.T, nh_mean, 0)) - \
-                  tensor.cast(weightcost, dtype=theano.config.floatX) * \
-                 self.W.get_value(borrow=True)
+                  tensor.cast(weightcost, dtype=theano.config.floatX) * self.W
         hbias_grad = tensor.mean(ph_mean - nh_mean, axis=0)
         vbias_grad = tensor.mean(self.input - nv_mean, axis=0)
         gradients = [W_grad, hbias_grad, vbias_grad]
@@ -801,7 +797,8 @@ class GRBM(RBM):
         return -hidden_term + vbias_term
 
     def get_cost_updates(self,
-                         lr=0.1,
+                         lr,
+                         weightcost,
                          k=1,
                          lambdas= [0.0, 0.0],
                          batch_size=None,
@@ -880,7 +877,7 @@ class GRBM(RBM):
         if automated_grad:
             gradients = self.compute_symbolic_grad(chain_end)
         else:
-            gradients = self.compute_rbm_grad(batch_size, ph_mean, nh_means[-1], nv_means[-1])
+            gradients = self.compute_rbm_grad(ph_mean, nh_means[-1], nv_means[-1],weightcost)
 
         epsilon = 0.001
         # ISSUE: it returns Inf when Wij is small
