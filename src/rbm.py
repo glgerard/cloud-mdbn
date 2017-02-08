@@ -273,7 +273,6 @@ class RBM(object):
     def get_cost_updates(self,
                          lr=0.1,
                          k=1,
-                         lambdas= [0.0, 0.0],
                          weightcost = 0.0,
                          batch_size=None,
                          persistent=None,
@@ -354,25 +353,15 @@ class RBM(object):
             gradients = self.compute_rbm_grad(batch_size, ph_mean, nh_means[-1], nv_means[-1],
                                               weightcost)
 
-        epsilon = 0.001
-        # ISSUE: it returns Inf when Wij is small
-        gradients[0] = gradients[0] / tensor.cast(1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W)+epsilon),
-                                                   dtype=theano.config.floatX)
-
-        # constructs the update dictionary
-        multipliers = [
-            # Issue: it returns Inf when Wij is small, therefore a small constant is added
-            (1 - 2 * lr * lambdas[1]) / (1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)),
-            1,1]
-
-        for gradient, param, multiplier, param_speed in zip(
-                gradients, self.params, multipliers, self.params_speed):
+        for gradient, param, param_speed in zip(
+                gradients, self.params, self.params_speed):
             # make sure that the momentum is of the right dtype
-            updates[param_speed] = gradient + (param_speed - gradient) * \
+            updates[param_speed] = gradient * \
+                                   tensor.cast(lr, dtype=theano.config.floatX) + \
+                                   param_speed * \
                                    tensor.cast(self.momentum, dtype=theano.config.floatX)
             # make sure that the learning rate is of the right dtype
-            updates[param] = param * tensor.cast(multiplier, dtype=theano.config.floatX) + \
-                             param_speed * tensor.cast(lr, dtype=theano.config.floatX)
+            updates[param] = param + param_speed
 
         if persistent:
             # Note that this works only if persistent is a shared variable
@@ -399,7 +388,7 @@ class RBM(object):
         gradients = tensor.grad(cost, self.params, consider_constant=[chain_end])
         return gradients
 
-    def compute_rbm_grad(self, batch_size, ph_mean, nh_mean, nv_mean, weightcost):
+    def compute_rbm_grad(self, batch_size, ph_mean, nh_mean, nv_mean, weightcost=0.0):
         """
         Compute the gradient of the log-likelihood for an RBM with respect
         to the parameters self.params using the expectations.
@@ -418,10 +407,14 @@ class RBM(object):
                         Boltzmann Machines" (2010))
         :return: a list with the gradients for each parameter in self.params
         """
-        W_grad = (tensor.dot(self.input.T, ph_mean) -
-                  tensor.dot(nv_mean.T, nh_mean)) / \
-                 tensor.cast(batch_size, dtype=theano.config.floatX) - \
-                 tensor.cast(weightcost, dtype=theano.config.floatX) * \
+#        W_grad = (tensor.dot(self.input.T, ph_mean) -
+#                  tensor.dot(nv_mean.T, nh_mean)) / \
+#                 tensor.cast(batch_size, dtype=theano.config.floatX) - \
+#                 tensor.cast(weightcost, dtype=theano.config.floatX) * \
+#                 self.W.get_value(borrow=True)
+        W_grad = tensor.mean(tensor.tensordot(self.input.T, ph_mean,0) -
+                  tensor.tensordot(nv_mean.T, nh_mean, 0)) - \
+                  tensor.cast(weightcost, dtype=theano.config.floatX) * \
                  self.W.get_value(borrow=True)
         hbias_grad = tensor.mean(ph_mean - nh_mean, axis=0)
         vbias_grad = tensor.mean(self.input - nv_mean, axis=0)
@@ -806,6 +799,115 @@ class GRBM(RBM):
         vbias_term = 0.5*tensor.sqr(v_sample - self.vbias).sum(axis=1)
         hidden_term = nnet.softplus(wx_b).sum(axis=1)
         return -hidden_term + vbias_term
+
+    def get_cost_updates(self,
+                         lr=0.1,
+                         k=1,
+                         lambdas= [0.0, 0.0],
+                         batch_size=None,
+                         persistent=None,
+                         automated_grad=False
+                         ):
+        """This functions implements one step of CD-k or PCD-k
+
+        :param lr: learning rate used to train the RBM
+
+        :param k: number of Gibbs steps to do in CD-k/PCD-k
+
+        :param lambdas: parameters for tuning weigths updates in CD-k/PCD-k
+                         of Bernoullian RBM
+
+        :param weightcost: L1 weight-decay (see Hinton 2010
+            "A Practical Guide to Training Restricted Boltzmann
+            Machines" section 10)
+
+        :param batch_size: size of the batch of samples used for training
+
+        :param persistent: None for CD. For PCD, shared variable
+            containing archived state of Gibbs chain. This must be a shared
+            variable of size (batch size, number of hidden units).
+
+        :param symbolic_grad: True if Theano automated gradient is
+            used instead of CD. Default is False.
+
+        :return: Returns a proxy for the cost and the updates dictionary. The
+        dictionary contains the update rules for weights and biases but
+        also an update of the shared variable used to store the persistent
+        chain, if one is used.
+        """
+
+        self.Wt = self.W.T
+        # compute values for the positive phase
+        pre_sigmoid_ph, ph_mean, ph_sample = self.sample_h_given_v(self.input)
+
+        # decide how to initialize persistent chain:
+        # for CD, we use the newly generate hidden sample
+        # for PCD, we initialize from the archived state of the chain
+        if persistent is None:
+            chain_start = ph_sample
+        else:
+            chain_start = persistent[:batch_size]
+
+        # perform actual negative phase
+        # in order to implement CD-k/PCD-k we need to scan over the
+        # function that implements one gibbs step k times.
+        # Read Theano tutorial on scan for more information :
+        # http://deeplearning.net/software/theano/library/scan.html
+        # the scan will return the entire Gibbs chain
+        (
+            [
+                pre_sigmoid_nvs,
+                nv_means,
+                nv_samples,
+                pre_sigmoid_nhs,
+                nh_means,
+                nh_samples
+            ],
+            updates
+        ) = theano.scan(
+            self.gibbs_hvh,
+            # the None are place holders, saying that
+            # chain_start is the initial state corresponding to the
+            # 6th output
+            outputs_info=[None, None, None, None, None, chain_start],
+            n_steps=k,
+            name="gibbs_hvh"
+        )
+        # determine gradients on RBM parameters
+        # note that we only need the sample at the end of the chain
+        chain_end = nv_samples[-1]
+
+        if automated_grad:
+            gradients = self.compute_symbolic_grad(chain_end)
+        else:
+            gradients = self.compute_rbm_grad(batch_size, ph_mean, nh_means[-1], nv_means[-1])
+
+        epsilon = 0.001
+        # ISSUE: it returns Inf when Wij is small
+        gradients[0] = gradients[0] / tensor.cast(1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W)+epsilon),
+                                                   dtype=theano.config.floatX)
+
+        # constructs the update dictionary
+        multipliers = [
+        # Issue: it returns Inf when Wij is small, therefore a small constant is added
+            (1 - 2 * lr * lambdas[1]) / (1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)),
+            1,1]
+
+        for gradient, param, multiplier in zip(gradients, self.params, multipliers):
+            # make sure that the learning rate is of the right dtype
+            updates[param] = param + gradient * tensor.cast(lr, dtype=theano.config.floatX) \
+                             * tensor.cast(multiplier, dtype=theano.config.floatX)
+
+        if persistent:
+            # Note that this works only if persistent is a shared variable
+            updates[persistent] = tensor.set_subtensor(persistent[:batch_size],nh_samples[-1])
+            # pseudo-likelihood is a better proxy for PCD
+            monitoring_cost = self.get_pseudo_likelihood_cost(updates)
+        else:
+            # reconstruction cross-entropy is a better proxy for CD
+            monitoring_cost = self.get_reconstruction_cost(pre_sigmoid_nvs[-1])
+
+        return monitoring_cost, updates
 
     def get_reconstruction_cost(self, pre_sigmoid_nv):
         """ Compute mean squared error between reconstructed data and input data.

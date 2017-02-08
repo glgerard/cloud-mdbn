@@ -17,6 +17,7 @@ def csvToConfig(configCsvFile, configJsonFile, callback_fn):
 
             config["seed"] = literal_eval(row["seed"])
             config["runs"] = literal_eval(row["runs"])
+            config["p"] = literal_eval(row["p"])
 
             pathways=[]
 
@@ -41,6 +42,7 @@ def csvToConfig(configCsvFile, configJsonFile, callback_fn):
                             except:
                                 netConfig[key] = row[colL2]
             config['pathways'] = pathways
+            config['uuid'] = row['uuid']
             callback_fn(config, row['config_file'])
 
     return
