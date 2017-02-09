@@ -140,9 +140,10 @@ class RBM(object):
             )
 
         # initialize input layer for standalone RBM or layer0 of DBN
-        self.input = input
         if not input:
             self.input = tensor.matrix('input')
+        else:
+            self.input = input
 
         self.W = W
         self.Wt = W.T
@@ -159,18 +160,21 @@ class RBM(object):
 
 #        self.momentum = tensor.cast(0, dtype=theano.config.floatX)
 
+        self.reset_speed_params()
+
+        self.speed_params = [self.W_speed, self.hbias_speed, self.vbias_speed]
+
+    def reset_speed_params(self):
         self.W_speed = theano.shared(
-            numpy.zeros((n_visible, n_hidden), dtype=theano.config.floatX),
+            numpy.zeros((self.n_visible, self.n_hidden), dtype=theano.config.floatX),
             name='W_speed',
             borrow=True)
-        self.hbias_speed = theano.shared(numpy.zeros(n_hidden, dtype=theano.config.floatX),
-                                        name='hbias_speed',
-                                        borrow=True)
-        self.vbias_speed = theano.shared(numpy.zeros(n_visible, dtype=theano.config.floatX),
-                                        name='vbias_speed',
-                                        borrow=True)
-
-        self.params_speed = [self.W_speed, self.hbias_speed, self.vbias_speed]
+        self.hbias_speed = theano.shared(numpy.zeros(self.n_hidden, dtype=theano.config.floatX),
+                                         name='hbias_speed',
+                                         borrow=True)
+        self.vbias_speed = theano.shared(numpy.zeros(self.n_visible, dtype=theano.config.floatX),
+                                         name='vbias_speed',
+                                         borrow=True)
 
     def free_energy(self, v_sample):
         ''' Function to compute the free energy '''
@@ -275,6 +279,7 @@ class RBM(object):
                          momentum,
                          weightcost,
                          k=1,
+#                         batch_size=None,
                          persistent=None,
                          automated_grad=False
                          ):
@@ -316,7 +321,8 @@ class RBM(object):
         if persistent is None:
             chain_start = ph_sample
         else:
-            chain_start = persistent[:batch_size]
+#            chain_start = persistent[:batch_size]
+            chain_start = persistent
 
         # perform actual negative phase
         # in order to implement CD-k/PCD-k we need to scan over the
@@ -353,21 +359,23 @@ class RBM(object):
             gradients = self.compute_rbm_grad(ph_mean, nh_means[-1], nv_means[-1],
                                               weightcost)
 
-        for gradient, param, param_speed in zip(
-                gradients, self.params, self.params_speed):
+        for gradient, param, speed_param in zip(
+                gradients, self.params, self.speed_params):
             # make sure that the momentum is of the right dtype
             # make sure that the learning rate is of the right dtype
-            updates[param] = param + param_speed * \
-                                   tensor.cast(lr, dtype=theano.config.floatX)
-
-            updates[param_speed] = param_speed * \
+            updates[speed_param] = speed_param * \
                                    tensor.cast(momentum, dtype=theano.config.floatX) + \
                                    gradient * \
                                    (1.0 - tensor.cast(momentum, dtype=theano.config.floatX))
 
+            updates[param] = param + speed_param * \
+                                   tensor.cast(lr, dtype=theano.config.floatX)
+
         if persistent:
             # Note that this works only if persistent is a shared variable
-            updates[persistent] = tensor.set_subtensor(persistent[:batch_size],nh_samples[-1])
+#            updates[persistent] = tensor.set_subtensor(persistent[:batch_size],nh_samples[-1])
+#            updates[persistent] = tensor.set_subtensor(persistent, nh_samples[-1])
+            updates[persistent] = nh_samples[-1]
             # pseudo-likelihood is a better proxy for PCD
             monitoring_cost = self.get_pseudo_likelihood_cost(updates)
         else:
@@ -502,7 +510,7 @@ class RBM(object):
         cost, updates = self.get_cost_updates(lr=learning_rate,
                                               k=k,
                                               weightcost=weightcost,
-                                              batch_size=batch_size,
+#                                              batch_size=batch_size,
                                               persistent=persistent_chain
                                             )
 
@@ -801,7 +809,7 @@ class GRBM(RBM):
                          weightcost,
                          k=1,
                          lambdas= [0.0, 0.0],
-                         batch_size=None,
+#                         batch_size=None,
                          persistent=None,
                          automated_grad=False
                          ):
@@ -843,7 +851,8 @@ class GRBM(RBM):
         if persistent is None:
             chain_start = ph_sample
         else:
-            chain_start = persistent[:batch_size]
+#            chain_start = persistent[:batch_size]
+            chain_start = persistent
 
         # perform actual negative phase
         # in order to implement CD-k/PCD-k we need to scan over the
@@ -877,9 +886,9 @@ class GRBM(RBM):
         if automated_grad:
             gradients = self.compute_symbolic_grad(chain_end)
         else:
-            gradients = self.compute_rbm_grad(ph_mean, nh_means[-1], nv_means[-1],weightcost)
+            gradients = self.compute_rbm_grad(ph_mean, nh_means[-1], nv_means[-1], weightcost)
 
-        epsilon = 0.001
+        epsilon = 0.0001
         # ISSUE: it returns Inf when Wij is small
         gradients[0] = gradients[0] / tensor.cast(1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W)+epsilon),
                                                    dtype=theano.config.floatX)
@@ -897,7 +906,9 @@ class GRBM(RBM):
 
         if persistent:
             # Note that this works only if persistent is a shared variable
-            updates[persistent] = tensor.set_subtensor(persistent[:batch_size],nh_samples[-1])
+#            updates[persistent] = tensor.set_subtensor(persistent[:batch_size],nh_samples[-1])
+#            updates[persistent] = tensor.set_subtensor(persistent,nh_samples[-1])
+            updates[persistent] = nh_samples[-1]
             # pseudo-likelihood is a better proxy for PCD
             monitoring_cost = self.get_pseudo_likelihood_cost(updates)
         else:
@@ -912,7 +923,6 @@ class GRBM(RBM):
             Mean over the samples and features.
 
         """
-
         error = tensor.sqr(nnet.sigmoid(pre_sigmoid_nv) - self.input).mean()
 
         return error

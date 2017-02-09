@@ -308,16 +308,16 @@ class DBN(object):
 
             # get the cost and the updates list
             if isinstance(rbm, GRBM):
-                cost, updates = rbm.get_cost_updates(learning_rate,
-                                                     weightcost,
+                cost, updates = rbm.get_cost_updates(lr=learning_rate,
+                                                     weightcost=weightcost,
                                                      lambdas=lambdas,
 #                                                     batch_size=batch_size,
                                                      persistent=persistent_chain[i],
                                                      k=k)
             else:
-                cost, updates = rbm.get_cost_updates(learning_rate,
-                                                     momentum,
-                                                     weightcost,
+                cost, updates = rbm.get_cost_updates(lr=learning_rate,
+                                                     momentum=momentum,
+                                                     weightcost=weightcost,
 #                                                     batch_size=batch_size,
                                                      persistent=persistent_chain[i],
                                                      k=k)
@@ -344,7 +344,7 @@ class DBN(object):
                 fn = theano.function(
 #                    inputs=[indexes, momentum, theano.In(learning_rate), theano.In(batch_size)],
                     inputs=[indexes, learning_rate, momentum,
-                            theano.In(weightcost, value=0.0002)],
+                                      theano.In(weightcost, value=0.0002)],
                     outputs=cost,
                     updates=updates,
                     givens={
@@ -358,7 +358,7 @@ class DBN(object):
             # append `fn` to the list of functions
             train_fns.append(fn)
 
-            train_sample = tensor.matrix('train_smaple', dtype=theano.config.floatX)
+            train_sample = tensor.matrix('train_sample', dtype=theano.config.floatX)
             test_sample = tensor.matrix('validation_smaple', dtype=theano.config.floatX)
 
             feg = rbm.free_energies(train_sample, test_sample)
@@ -464,6 +464,8 @@ class DBN(object):
         mdbnlogging.debug('RUN:%i:DBN:%s:number of training batches:%d' %
                       (run, self.name, n_train_batches))
 
+        bestParams = dict()
+
         for layer in range(self.n_layers):
             if graph_output:
                 plt.figure(layer+1)
@@ -480,15 +482,13 @@ class DBN(object):
             count = 0
             runningAverageCost = 0
 
-            while epoch < pretraining_epochs[layer]:
-                epoch = epoch + 1
-
-                idx_minibatches, minibatches = get_minibatches_idx(n_data,
-                                                                   batch_size,
-                                                                   self.numpy_rng)
+            for epoch in numpy.arange(pretraining_epochs[layer]):
+#                idx_minibatches, minibatches = get_minibatches_idx(n_data,
+#                                                                   batch_size,
+#                                                                   self.numpy_rng)
 
                 # go through the training set
-                if epoch == 6:
+                if epoch == 5:
                     momentum = 0.9
 
                 costs=[]
@@ -513,7 +513,6 @@ class DBN(object):
                                      (run, rbm_name, layer, epoch, meanCost, runningAverageCost))
                     minCost = meanCost
                     bestEpoch = epoch
-                    bestParams = dict()
                     for p in self.rbm_layers[layer].params:
                         bestParams[p.name] = p.get_value()
 
@@ -547,10 +546,10 @@ class DBN(object):
 
             mdbnlogging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f:running average:%f' %
                          (run, rbm_name, layer, bestEpoch, minCost, runningAverageCost))
-            self.rbm_layers[layer].W = theano.shared(numpy.asarray(bestParams['W']/self.rbm_layers[layer].p,
-                                                                   dtype=theano.config.floatX))
-            self.rbm_layers[layer].hbias = theano.shared(numpy.asarray(bestParams['hbias'], dtype=theano.config.floatX))
-            self.rbm_layers[layer].vbias = theano.shared(numpy.asarray(bestParams['vbias'], dtype=theano.config.floatX))
+#            self.rbm_layers[layer].W = theano.shared(numpy.asarray(bestParams['W']/self.rbm_layers[layer].p,
+#                                                                   dtype=theano.config.floatX))
+#            self.rbm_layers[layer].hbias = theano.shared(numpy.asarray(bestParams['hbias'], dtype=theano.config.floatX))
+#            self.rbm_layers[layer].vbias = theano.shared(numpy.asarray(bestParams['vbias'], dtype=theano.config.floatX))
             self.rbm_layers[layer].training_end_state = (bestEpoch, minCost)
 
             if graph_output:

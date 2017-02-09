@@ -70,11 +70,11 @@ def train_dbn(train_set, validation_set,
               hidden_layers_sizes=layers_sizes[:-1],
               n_outs=layers_sizes[-1])
 
-    dbn.training(train_set,
-                 batch_size, k,
-                 pretraining_epochs,
-                 pretrain_lr,
-                 lambdas,
+    dbn.training(train_set_x=train_set,
+                 batch_size=batch_size, k=k,
+                 pretraining_epochs=pretraining_epochs,
+                 pretrain_lr=pretrain_lr,
+                 lambdas=lambdas,
                  persistent=persistent,
                  run=run,
                  verbose=verbose,
@@ -179,8 +179,8 @@ def train_MDBN(datafiles,
                 cPickle.dump(dbn_dict[pathway], f, protocol=cPickle.HIGHEST_PROTOCOL)
 
         output_t, output_v = dbn_dict[pathway].MLP_output_from_datafile(datafiles[pathway],
-                                                                    holdout=holdout,
-                                                                    repeats=repeats)
+                                                                        holdout=holdout,
+                                                                        repeats=repeats)
         output_t_list.append(output_t)
         output_v_list.append(output_v)
 
