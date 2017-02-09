@@ -547,7 +547,8 @@ class DBN(object):
 
             mdbnlogging.info('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f:running average:%f' %
                          (run, rbm_name, layer, bestEpoch, minCost, runningAverageCost))
-            self.rbm_layers[layer].W = theano.shared(numpy.asarray(bestParams['W'],dtype=theano.config.floatX))
+            self.rbm_layers[layer].W = theano.shared(numpy.asarray(bestParams['W']/self.rbm_layers[layer].p,
+                                                                   dtype=theano.config.floatX))
             self.rbm_layers[layer].hbias = theano.shared(numpy.asarray(bestParams['hbias'], dtype=theano.config.floatX))
             self.rbm_layers[layer].vbias = theano.shared(numpy.asarray(bestParams['vbias'], dtype=theano.config.floatX))
             self.rbm_layers[layer].training_end_state = (bestEpoch, minCost)
