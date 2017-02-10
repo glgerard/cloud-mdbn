@@ -107,9 +107,11 @@ class RBM(object):
             # converted using asarray to dtype theano.config.floatX so
             # that the code is runable on GPU
             initial_W = numpy.asarray(
-                numpy_rng.uniform(
-                    low=-4 * numpy.sqrt(6. / (n_hidden + n_visible)),
-                    high=4 * numpy.sqrt(6. / (n_hidden + n_visible)),
+                numpy_rng.normal(
+                    scale=0.1,
+#                numpy_rng.uniform(
+#                    low=-4 * numpy.sqrt(6. / (n_hidden + n_visible)),
+#                    high=4 * numpy.sqrt(6. / (n_hidden + n_visible)),
                     size=(n_visible, n_hidden)
                 ),
                 dtype=theano.config.floatX
@@ -417,8 +419,8 @@ class RBM(object):
                         Boltzmann Machines" (2010))
         :return: a list with the gradients for each parameter in self.params
         """
-        W_grad = tensor.mean(tensor.tensordot(self.input.T, ph_mean, 0) -
-                  tensor.tensordot(nv_mean.T, nh_mean, 0)) - \
+        W_grad = tensor.mean(tensor.mean(tensor.tensordot(self.input.T, ph_mean, 0) -
+                  tensor.tensordot(nv_mean.T, nh_mean, 0),axis=1),axis=1) - \
                   tensor.cast(weightcost, dtype=theano.config.floatX) * self.W
         hbias_grad = tensor.mean(ph_mean - nh_mean, axis=0)
         vbias_grad = tensor.mean(self.input - nv_mean, axis=0)
@@ -587,7 +589,7 @@ class RBM(object):
         momentum = initial_momentum
         for epoch in range(training_epochs):
 
-            if epoch == 6:
+            if epoch == 5:
                 momentum = final_momentum
 
             _, minibatches = get_minibatches_idx(n_train_data,
@@ -849,7 +851,8 @@ class GRBM(RBM):
         # for CD, we use the newly generate hidden sample
         # for PCD, we initialize from the archived state of the chain
         if persistent is None:
-            chain_start = ph_sample
+#            chain_start = ph_sample
+            chain_start = ph_mean
         else:
 #            chain_start = persistent[:batch_size]
             chain_start = persistent
@@ -888,27 +891,30 @@ class GRBM(RBM):
         else:
             gradients = self.compute_rbm_grad(ph_mean, nh_means[-1], nv_means[-1], weightcost)
 
-        epsilon = 0.0001
+        epsilon = 0.00001
         # ISSUE: it returns Inf when Wij is small
-        gradients[0] = gradients[0] / tensor.cast(1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W)+epsilon),
+        gradients[0] = gradients[0] / tensor.cast(1.0 + 2.0 * lr * lambdas[0] / (tensor.abs_(self.W)+epsilon),
                                                    dtype=theano.config.floatX)
 
         # constructs the update dictionary
         multipliers = [
         # Issue: it returns Inf when Wij is small, therefore a small constant is added
-            (1 - 2 * lr * lambdas[1]) / (1 + 2 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)),
-            1,1]
+            (1.0 - 2.0 * lr * lambdas[1]) / (1.0 + 2.0 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)),
+#            (1.0 - 2.0 * lr * lambdas[1]),
+            1.0,
+            1.0]
 
         for gradient, param, multiplier in zip(gradients, self.params, multipliers):
             # make sure that the learning rate is of the right dtype
-            updates[param] = param + gradient * tensor.cast(lr, dtype=theano.config.floatX) \
-                             * tensor.cast(multiplier, dtype=theano.config.floatX)
+            updates[param] = param * tensor.cast(multiplier, dtype=theano.config.floatX) + \
+                             gradient * tensor.cast(lr, dtype=theano.config.floatX)
 
         if persistent:
             # Note that this works only if persistent is a shared variable
 #            updates[persistent] = tensor.set_subtensor(persistent[:batch_size],nh_samples[-1])
 #            updates[persistent] = tensor.set_subtensor(persistent,nh_samples[-1])
-            updates[persistent] = nh_samples[-1]
+#            updates[persistent] = nh_samples[-1]
+            updates[persistent] = nh_means[-1]
             # pseudo-likelihood is a better proxy for PCD
             monitoring_cost = self.get_pseudo_likelihood_cost(updates)
         else:

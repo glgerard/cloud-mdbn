@@ -35,9 +35,8 @@ import matplotlib.pyplot as plt
 import numpy
 import theano
 from theano import tensor
-#from theano.tensor.shared_randomstreams import RandomStreams
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-#from theano.compile.nanguardmode import NanGuardMode
+from theano.compile.nanguardmode import NanGuardMode
 
 from utils import get_minibatches_idx
 from utils import load_n_preprocess_data
@@ -165,9 +164,12 @@ class DBN(object):
             mdbnlogging.debug('DBN:%s:layer:%i:output:%i' % (name, layer, n_out))
 
             if W_list is None:
-                W = numpy.asarray(numpy_rng.uniform(
-                                low=-4.*numpy.sqrt(6. / (n_in + n_out)),
-                                high=4.*numpy.sqrt(6. / (n_in + n_out)),
+                W = numpy.asarray(
+                        numpy_rng.normal(
+                            scale=0.1,
+#                            numpy_rng.uniform(
+#                                low=-4.*numpy.sqrt(6. / (n_in + n_out)),
+#                                high=4.*numpy.sqrt(6. / (n_in + n_out)),
                                 size=(n_in, n_out)
                              ),dtype=theano.config.floatX)
             else:
@@ -288,7 +290,7 @@ class DBN(object):
         # index to a [mini]batch
         indexes = tensor.lvector('indexes')  # index to a minibatch
         learning_rate = tensor.scalar('lr', dtype=theano.config.floatX)  # learning rate to use
-#        batch_size = tensor.iscalar('batch_size')
+        #        batch_size = tensor.iscalar('batch_size')
         momentum = tensor.scalar('momentum', dtype=theano.config.floatX)
         weightcost = tensor.scalar('weigthcost', dtype=theano.config.floatX)
 
@@ -337,8 +339,11 @@ class DBN(object):
                     givens={
                         self.x: train_set_x[indexes]
                     },
+                    on_unused_input='warn',
                     mode=mode
-                    #           mode=NanGuardMode(nan_is_error=True, inf_is_error=True, big_is_error=True)
+#                    mode=NanGuardMode(nan_is_error=True,
+#                                      inf_is_error=True,
+#                                      big_is_error=True)
                 )
             else:
                 fn = theano.function(
@@ -352,7 +357,9 @@ class DBN(object):
 #                            rbm.momentum: momentum
                     },
                     mode = mode
-    #           mode=NanGuardMode(nan_is_error=True, inf_is_error=True, big_is_error=True)
+#                    mode=NanGuardMode(nan_is_error=True,
+#                                      inf_is_error=True,
+#                                      big_is_error=True)
                 )
 
             # append `fn` to the list of functions
@@ -470,7 +477,7 @@ class DBN(object):
             if graph_output:
                 plt.figure(layer+1)
 
-            momentum = 0.6
+            momentum = 0.5
 
             rbm_name = self.rbm_layers[layer].name
 
