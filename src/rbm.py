@@ -108,7 +108,7 @@ class RBM(object):
             # that the code is runable on GPU
             initial_W = numpy.asarray(
                 numpy_rng.normal(
-                    scale=0.1,
+                    scale=0.01,
 #                numpy_rng.uniform(
 #                    low=-4 * numpy.sqrt(6. / (n_hidden + n_visible)),
 #                    high=4 * numpy.sqrt(6. / (n_hidden + n_visible)),
@@ -281,7 +281,7 @@ class RBM(object):
                          momentum,
                          weightcost,
                          k=1,
-#                         batch_size=None,
+                         batch_size=None,
                          persistent=None,
                          automated_grad=False
                          ):
@@ -359,7 +359,7 @@ class RBM(object):
             gradients = self.compute_symbolic_grad(chain_end)
         else:
             gradients = self.compute_rbm_grad(ph_mean, nh_means[-1], nv_means[-1],
-                                              weightcost)
+                                              batch_size, weightcost)
 
         for gradient, param, speed_param in zip(
                 gradients, self.params, self.speed_params):
@@ -400,7 +400,7 @@ class RBM(object):
         gradients = tensor.grad(cost, self.params, consider_constant=[chain_end])
         return gradients
 
-    def compute_rbm_grad(self, ph_mean, nh_mean, nv_mean, weightcost):
+    def compute_rbm_grad(self, ph_mean, nh_mean, nv_mean, batch_size, weightcost):
         """
         Compute the gradient of the log-likelihood for an RBM with respect
         to the parameters self.params using the expectations.
@@ -419,8 +419,9 @@ class RBM(object):
                         Boltzmann Machines" (2010))
         :return: a list with the gradients for each parameter in self.params
         """
-        W_grad = tensor.mean(tensor.mean(tensor.tensordot(self.input.T, ph_mean, 0) -
-                  tensor.tensordot(nv_mean.T, nh_mean, 0),axis=1),axis=1) - \
+        W_grad = (tensor.dot(self.input.T, ph_mean) -
+                  tensor.dot(nv_mean.T, nh_mean))/ \
+                  tensor.cast(batch_size, dtype=theano.config.floatX) - \
                   tensor.cast(weightcost, dtype=theano.config.floatX) * self.W
         hbias_grad = tensor.mean(ph_mean - nh_mean, axis=0)
         vbias_grad = tensor.mean(self.input - nv_mean, axis=0)
@@ -811,7 +812,7 @@ class GRBM(RBM):
                          weightcost,
                          k=1,
                          lambdas= [0.0, 0.0],
-#                         batch_size=None,
+                         batch_size=None,
                          persistent=None,
                          automated_grad=False
                          ):
@@ -889,7 +890,8 @@ class GRBM(RBM):
         if automated_grad:
             gradients = self.compute_symbolic_grad(chain_end)
         else:
-            gradients = self.compute_rbm_grad(ph_mean, nh_means[-1], nv_means[-1], weightcost)
+            gradients = self.compute_rbm_grad(ph_mean, nh_means[-1], nv_means[-1],
+                                              batch_size, weightcost)
 
         epsilon = 0.00001
         # ISSUE: it returns Inf when Wij is small

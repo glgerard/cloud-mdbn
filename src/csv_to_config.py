@@ -52,4 +52,7 @@ def write_config(config, configFile):
         json.dump(config, f, indent=4, sort_keys=True)
 
 if __name__ == '__main__':
+    if(len(sys.argv)<3):
+        print("Usage: %s <config.csv> <config.json>" % sys.argv[0], file=sys.stderr)
+        exit(1)
     csvToConfig(sys.argv[1], sys.argv[2], write_config)

@@ -376,7 +376,7 @@ def run(config, datafiles, verbose):
                                 rng=numpy_rng)
         current_date_time = datetime.datetime.now()
         classes = find_unique_classes((dbn_output > 0.5) * numpy.ones_like(dbn_output))
-        mdbnlogging.info('RUN:%i:classes identified:%d' % (run, numpy.max(classes[0])))
+        mdbnlogging.info('RUN:%i:classes identified:%d' % (run, numpy.max(classes[0])+1))
         results.append(classes[0])
         mdbnlogging.info('RUN:%i:stop date:%s:stop time:%s' % (run,
                                                                current_date_time.strftime("%Y.%m.%d"),
@@ -390,5 +390,5 @@ def run(config, datafiles, verbose):
     numpy.savez('Results_%s.npz' % batch_start_date_str,
                 results=results)
     os.chdir(root_dir)
-    len_classes = [len(classes) for classes in results]
-    return numpy.min(len_classes), numpy.median(len_classes), numpy.max(len_classes)
+    len_classes = [numpy.max(classes)+1 for classes in results]
+    return len_classes

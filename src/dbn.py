@@ -166,7 +166,7 @@ class DBN(object):
             if W_list is None:
                 W = numpy.asarray(
                         numpy_rng.normal(
-                            scale=0.1,
+                            scale=0.01,
 #                            numpy_rng.uniform(
 #                                low=-4.*numpy.sqrt(6. / (n_in + n_out)),
 #                                high=4.*numpy.sqrt(6. / (n_in + n_out)),
@@ -290,7 +290,7 @@ class DBN(object):
         # index to a [mini]batch
         indexes = tensor.lvector('indexes')  # index to a minibatch
         learning_rate = tensor.scalar('lr', dtype=theano.config.floatX)  # learning rate to use
-        #        batch_size = tensor.iscalar('batch_size')
+        batch_size = tensor.iscalar('batch_size')
         momentum = tensor.scalar('momentum', dtype=theano.config.floatX)
         weightcost = tensor.scalar('weigthcost', dtype=theano.config.floatX)
 
@@ -313,14 +313,14 @@ class DBN(object):
                 cost, updates = rbm.get_cost_updates(lr=learning_rate,
                                                      weightcost=weightcost,
                                                      lambdas=lambdas,
-#                                                     batch_size=batch_size,
+                                                     batch_size=batch_size,
                                                      persistent=persistent_chain[i],
                                                      k=k)
             else:
                 cost, updates = rbm.get_cost_updates(lr=learning_rate,
                                                      momentum=momentum,
                                                      weightcost=weightcost,
-#                                                     batch_size=batch_size,
+                                                     batch_size=batch_size,
                                                      persistent=persistent_chain[i],
                                                      k=k)
 
@@ -332,8 +332,8 @@ class DBN(object):
 
             if isinstance(rbm, GRBM):
                 fn = theano.function(
-#                    inputs=[indexes, theano.In(learning_rate), theano.In(batch_size)],
-                    inputs=[indexes, learning_rate, theano.In(weightcost, value=0.0)],
+                    inputs=[indexes, learning_rate, batch_size,
+                            theano.In(weightcost, value=0.0)],
                     outputs=cost,
                     updates=updates,
                     givens={
@@ -347,8 +347,7 @@ class DBN(object):
                 )
             else:
                 fn = theano.function(
-#                    inputs=[indexes, momentum, theano.In(learning_rate), theano.In(batch_size)],
-                    inputs=[indexes, learning_rate, momentum,
+                    inputs=[indexes, learning_rate, momentum, batch_size,
                                       theano.In(weightcost, value=0.0002)],
                     outputs=cost,
                     updates=updates,
@@ -356,6 +355,7 @@ class DBN(object):
                             self.x: train_set_x[indexes]
 #                            rbm.momentum: momentum
                     },
+                    on_unused_input='warn',
                     mode = mode
 #                    mode=NanGuardMode(nan_is_error=True,
 #                                      inf_is_error=True,
@@ -482,8 +482,6 @@ class DBN(object):
             rbm_name = self.rbm_layers[layer].name
 
             # go through training epochs
-            epoch = 0
-
             minCost = numpy.inf
             bestEpoch = 0
             count = 0
@@ -502,13 +500,13 @@ class DBN(object):
                 for mb, minibatch in enumerate(minibatches):
                     if isinstance(self.rbm_layers[layer], GRBM):
                         costs.append(training_fns[layer](indexes=minibatch,
-                                                         lr=pretrain_lr[layer]))
-#                                                       batch_size=len(minibatch)))
+                                                         lr=pretrain_lr[layer],
+                                                         batch_size=len(minibatch)))
                     else:
                         costs.append(training_fns[layer](indexes=minibatch,
                                                          lr=pretrain_lr[layer],
+                                                         batch_size=len(minibatch),
                                                          momentum=momentum))
-#                                                       batch_size=len(minibatch)))
 
                 meanCost = numpy.mean(costs)
                 runningCost = count * runningAverageCost + len(costs) * meanCost

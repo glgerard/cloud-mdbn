@@ -6,16 +6,15 @@ from hashlib import md5
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from datetime import datetime
-import time
 import logging
 import traceback
 from csv_to_config import csvToConfig
 
-host = '127.0.0.1'
+host = 'taurus'
 port = 5000
 
 # Local DynamoDB instance
-dynamodb_url="http://localhost:8000"
+dynamodb_url="http://taurus:8000"
 region_name='eu-west-1'
 
 jobCompleted = False
@@ -35,7 +34,7 @@ def main(configCsvFile, configJsonFile):
                     'KeyType': 'HASH'
                 },
                 {
-                    'AttributeName': 'n_classes',
+                    'AttributeName': 'run',
                     'KeyType': 'RANGE'
                 }
             ],
@@ -45,7 +44,7 @@ def main(configCsvFile, configJsonFile):
                     'AttributeType': 'S'
                 },
                 {
-                    'AttributeName': 'n_classes',
+                    'AttributeName': 'run',
                     'AttributeType': 'N'
                 }
             ],
@@ -66,16 +65,18 @@ def main(configCsvFile, configJsonFile):
 def wait_job():
     jobRunning = True
     while jobRunning:
-        sleep(30)
+        sleep(60)
         r = requests.get('http://%s:%d/status' % (host, port))
         if r.status_code == requests.codes.ok:
+            print("[%s]: %s" % (datetime.now(), r.text))
             jobRunning = r.text == 'busy'
         else:
             r.raise_for_status()
     return
 
 def send_config(config, configFile = None):
-    uuid = md5(str(config.values())).hexdigest()
+#    uuid = md5(str(config.values())).hexdigest()
+    uuid = config['uuid']
 
     response = table.query(
         KeyConditionExpression=Key('job').eq(uuid)
@@ -84,35 +85,23 @@ def send_config(config, configFile = None):
     done=False
     for i in response['Items']:
         done=True
-        print('Run with UUID %s already completed with %s classes' % (uuid, i['n_classes']))
+        print('Run with UUID %s already completed: run %s with %s classes' % (uuid, i['run'],
+                                                                             i['n_classes']))
         print('Date: ' + datetime.fromtimestamp(i['timestamp']).strftime("%Y-%m-%d_%H%M"))
 
     if done:
         return
 
     try:
-        timestamp = time.time()
-
         r = requests.get('http://%s:%d/status' % (host, port))
         if r.status_code == requests.codes.ok:
             if r.text == 'ready':
-                print('JOB UUID: ' + uuid)
+                print('[%s]: Launching job with uuid %s' % (datetime.now(),uuid))
                 r = requests.post('http://%s:%d/run/%s' % (host, port, uuid),
                                   json=config)
                 if r.status_code == requests.codes.ok:
                     wait_job()
-                    r = requests.get('http://%s:%d/median/%s' % (host, port, uuid))
-                    if r.status_code == requests.codes.ok:
-                        n_classes = int(r.text)
-                        table.put_item(  # Add the completed job in DynamoDB
-                            Item={
-                                'job': uuid,
-                                'n_classes': n_classes,
-                                'timestamp': timestamp
-                            }
-                        )
-                    else:
-                        r.raise_for_status()
+                    print('[%s]: Job with uuid %s completed' % (datetime.now(),uuid))
                 else:
                     r.raise_for_status()
         else:
@@ -123,4 +112,7 @@ def send_config(config, configFile = None):
         traceback.format_exc()
 
 if __name__ == '__main__':
+    if(len(sys.argv)<3):
+        print("Usage: %s <config.csv> <config.json>" % sys.argv[0], file=sys.stderr)
+        exit(1)
     main(sys.argv[1], sys.argv[2])
