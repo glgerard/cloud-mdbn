@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import sys
 import zipfile
@@ -6,24 +7,20 @@ import json
 import logging
 import traceback
 import time
-from time import sleep
-from threading import Thread
 import boto3
-from decimal import Decimal
 
+from MDBN import MDBN
+from decimal import Decimal
 from flask import Flask
 from flask import request
-
-import MDBN
+from utils import read_cmdline
+from threading import Thread
 
 app = Flask('cloud-mdbn')
 
 # Local DynamoDB instance
 dynamodb_url="http://localhost:8000"
 region_name='eu-west-1'
-
-batch_output_dir = ''
-batch_start_date_str = ''
 
 BUSY = 10
 FREE = 0
@@ -43,7 +40,7 @@ class jobDescription():
 
 jobStatus = jobDescription()
 
-verbose = False
+mdbn = None
 
 def prepare_OV_TCGA_datafiles(config, datadir='data'):
     base_url = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3479191/bin/'
@@ -68,11 +65,11 @@ def prepare_OV_TCGA_datafiles(config, datadir='data'):
     os.chdir(root_dir)
     return datafiles
 
-def start_run(uuid, config, verbose):
+def start_run(uuid, config):
     global jobStatus
     jobStatus.set_status(BUSY, uuid)
     datafiles = prepare_OV_TCGA_datafiles(config)
-    len_classes = MDBN.run(config, datafiles, verbose)
+    len_classes = mdbn.run(config, datafiles)
     jobStatus.set_status(FREE, uuid)
 
     timestamp = time.time()
@@ -101,7 +98,7 @@ def runCmd(uuid):
     if jobStatus.get_status() == FREE:
         config = request.json
         try:
-            thread = Thread(target=start_run, args=(uuid, config, verbose))
+            thread = Thread(target=start_run, args=(uuid, config))
             thread.start()
         except:
             logging.error('Unexpected error (%s): %s' % (uuid, sys.exc_info()[0]))
@@ -111,16 +108,18 @@ def runCmd(uuid):
     else:
         return uuid, 403
 
-def main(argv, batch_dir_prefix='OV_Batch', config_filename='ov_config.json'):
-    daemonized, port, config_filename, verbose = \
-        MDBN.init(argv, batch_dir_prefix, config_filename)
+def main(argv, config_filename='ov_config.json'):
+    global mdbn
 
-    print (batch_output_dir)
+    daemonized, port, config_filename, log_enabled, verbose = \
+        read_cmdline(argv, config_filename)
+
+    mdbn = MDBN('OV_Batch',log_enabled=log_enabled, verbose=verbose)
     if not daemonized:
         with open('%s' % config_filename) as config_file:
             config = json.load(config_file)
             datafiles = prepare_OV_TCGA_datafiles(config)
-            MDBN.run(config, datafiles, verbose)
+            mdbn.run(config, datafiles)
     else:
         app.run(host='0.0.0.0',port=port, debug=False)
 

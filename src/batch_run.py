@@ -1,13 +1,13 @@
 from __future__ import print_function
 import requests
 import sys
-from time import sleep
-from hashlib import md5
 import boto3
-from boto3.dynamodb.conditions import Key, Attr
-from datetime import datetime
 import logging
 import traceback
+from time import sleep
+from hashlib import md5
+from boto3.dynamodb.conditions import Key, Attr
+from datetime import datetime
 from csv_to_config import csvToConfig
 
 host = 'taurus'

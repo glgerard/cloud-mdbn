@@ -24,13 +24,14 @@ Copyright (c) 2010--2015, Deep Learning Tutorials Development Team
 All rights reserved.
 """
 
-import numpy
-from scipy.spatial import distance
+from __future__ import print_function
 import os
-
+import getopt
 import gzip
-from scipy import stats
+import numpy
 import theano
+from scipy import stats
+from scipy.spatial import distance
 
 def import_TCGA_data(file, datadir, dtype):
     # Load the data, each column is originally a single person
@@ -82,14 +83,14 @@ def get_minibatches_idx(n, batch_size, rng=None):
 
 
 def load_n_preprocess_data(datafile,
-                           dtype=theano.config.floatX,
-                           holdout=0.0,
+                           holdout_fraction=0.0,
+                           repeats=1,
                            clip=None,
                            transform_fn=None,
                            exponent=1.0,
-                           repeats=1,
+                           datadir='data',
                            rng=None,
-                           datadir='data'):
+                           dtype=theano.config.floatX):
 
     n_data, data = import_TCGA_data(datafile, datadir, dtype)
 
@@ -109,7 +110,7 @@ def load_n_preprocess_data(datafile,
     if repeats > 1:
         zdata = numpy.repeat(zdata, repeats=repeats, axis=0)
 
-    validation_set_size = int(n_data * holdout)
+    validation_set_size = int(n_data * holdout_fraction)
 
     # pre shuffle the data if we have a validation set
     _, indexes = get_minibatches_idx(n_data, n_data -
@@ -181,6 +182,42 @@ def find_unique_classes(dbn_output):
                              (numpy.sum(dbn_output == pattern, axis=1) == output_nodes) * idx
 
     return classified_samples, distance_matrix
+
+def read_cmdline(argv, config_filename):
+    log_enabled = False
+    verbose = False
+    daemonized = False
+    port = 5000
+
+    try:
+        opts, args = getopt.getopt(argv, "hc:dlp:v", ["help", "config=", "daemon", "log", "port=", "verbose"])
+    except getopt.GetoptError:
+        usage()
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt in ("-h", "--help"):
+            usage()
+            sys.exit()
+        elif opt in ("-v", "--verbose"):
+            verbose = True
+        elif opt in ("-c", "--config"):
+            config_filename = arg
+        elif opt in ("-l", "--log"):
+            log_enabled = True
+        elif opt in ("-d", "--dameon"):
+            log_enabled = True
+            daemonized = True
+        elif opt in ("-p", "--port"):
+            try:
+                port = int(arg)
+            except ValueError:
+                raise ValueError('port must be a number beween 0 and 65535')
+            if port < 0 or port > 65535:
+                raise ValueError('port must be a number beween 0 and 65535')
+        else:
+            assert False, "unhandled option"
+
+    return daemonized, port, config_filename, log_enabled, verbose
 
 def usage():
     print("--help usage summary")

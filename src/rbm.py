@@ -29,17 +29,15 @@ from __future__ import print_function, division
 import timeit
 import os
 import matplotlib.pyplot as plt
-
 import numpy
 import theano
+import scipy.misc
+
 from theano import tensor
 from theano.tensor import nnet
 from theano.compile.nanguardmode import NanGuardMode
-
 #from theano.tensor.shared_randomstreams import RandomStreams
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
-
-import scipy.misc
 from MNIST import MNIST
 from utils import get_minibatches_idx
 

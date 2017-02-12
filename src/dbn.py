@@ -29,22 +29,18 @@ from __future__ import print_function, division
 import timeit
 import sys
 import mdbnlogging
-
 import matplotlib.pyplot as plt
-
 import numpy
 import theano
+
 from theano import tensor
 from theano.sandbox.rng_mrg import MRG_RandomStreams as RandomStreams
 from theano.compile.nanguardmode import NanGuardMode
-
 from utils import get_minibatches_idx
 from utils import load_n_preprocess_data
-
 from rbm import RBM
 from rbm import GRBM
 from mlp import HiddenLayer
-
 from MNIST import MNIST
 
 class DBN(object):
@@ -574,7 +570,7 @@ class DBN(object):
                                  exponent=1.0,
                                  datadir='data'):
         train_set, validation_set = load_n_preprocess_data(datafile,
-                                                           holdout=holdout,
+                                                           holdout_fraction=holdout,
                                                            clip=clip,
                                                            transform_fn=transform_fn,
                                                            exponent=exponent,
