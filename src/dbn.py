@@ -509,9 +509,10 @@ class DBN(object):
                 count = count + len(costs)
                 runningAverageCost = runningCost / count
 
-                if meanCost < minCost:
-                    mdbnlogging.debug('RUN:%i:DBN:%s:layer:%i:epoch:%i:minimum cost:%f:running average:%f' %
+                mdbnlogging.debug('RUN:%i:DBN:%s:layer:%i:epoch:%i:mean cost:%f:running average:%f' %
                                      (run, rbm_name, layer, epoch, meanCost, runningAverageCost))
+
+                if meanCost < minCost:
                     minCost = meanCost
                     bestEpoch = epoch
                     for p in self.rbm_layers[layer].params:

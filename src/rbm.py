@@ -214,12 +214,10 @@ class RBM(object):
     def sample_h_given_v(self, v0_sample):
         ''' This function infers state of hidden units given visible units '''
         # compute the activation of the hidden units given a sample of
-        # the visibles
+        # the visible units
         pre_sigmoid_h1, h1_mean = self.propup(v0_sample)
-        r_sample = self.theano_rng.binomial(size=h1_mean.shape,
-                                            n=1, p=self.p,
-                                            dtype=theano.config.floatX)
-        h1_mean = h1_mean * r_sample
+
+        h1_mean = h1_mean * self.r_sample
 
         # get a sample of the hiddens given their activation
         # Note that theano_rng.binomial returns a symbolic sample of dtype
@@ -312,6 +310,12 @@ class RBM(object):
         """
 
         self.Wt = self.W.T
+
+        # Dropout
+        self.r_sample = self.theano_rng.binomial(size=(batch_size,self.n_hidden),
+                                            n=1, p=self.p,
+                                            dtype=theano.config.floatX)
+
         # compute values for the positive phase
         pre_sigmoid_ph, ph_mean, ph_sample = self.sample_h_given_v(self.input)
 
@@ -843,6 +847,12 @@ class GRBM(RBM):
         """
 
         self.Wt = self.W.T
+
+        # Dropout
+        self.r_sample = self.theano_rng.binomial(size=(batch_size,self.n_hidden),
+                                            n=1, p=self.p,
+                                            dtype=theano.config.floatX)
+
         # compute values for the positive phase
         pre_sigmoid_ph, ph_mean, ph_sample = self.sample_h_given_v(self.input)
 
@@ -1053,8 +1063,6 @@ def test(class_to_test=RBM,
     scipy.misc.imsave('samples.png', Y)
 
     os.chdir(root_dir)
-
-
 
 if __name__ == '__main__':
     test(class_to_test=RBM, training_epochs=8)

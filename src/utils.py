@@ -26,6 +26,7 @@ All rights reserved.
 
 from __future__ import print_function
 import os
+import sys
 import getopt
 import gzip
 import numpy

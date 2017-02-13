@@ -102,9 +102,9 @@ class MDBN(object):
         else:
             self.log_enabled = log_enabled
         if verbose is None:
-            self.verbose = verbose
-        else:
             self.verbose = False
+        else:
+            self.verbose = verbose
         if batch_dir_prefix is None:
             self.batch_dir_prefix = "batch"
         else:
