@@ -3,6 +3,7 @@
 # Scan configuration JSON files in the CONFIG_DIR that begins with PREFIX
 # convert them into a csv representation and appends them to a csv file.
 
+TOOLS_DIR=${MDBN_ROOT}/tools
 CONF_DIR=$1
 PREFIX=ov
 
@@ -14,6 +15,6 @@ cat ${PREFIX}_configs_header.csv > ${PREFIX}_configs.csv
 
 for json in $(ls ${PREFIX}_config*.json); do
     echo $json
-    python ${CWD}/config_to_csv.py $json >> ${PREFIX}_configs.csv 
+    python ${TOOLS_DIR}/config_to_csv.py $json >> ${PREFIX}_configs.csv 
 done
 cd $CWD
