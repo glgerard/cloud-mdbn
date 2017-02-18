@@ -1,9 +1,8 @@
 #!/bin/bash
+# Scan the batch.log files and extract from each the cost trends
 
-# Scan the batch.log files and extract from each the cost trends 
-
-RUN_DIR=../MDBN_run
-OUT_DIR=../results
+RUN_DIR=${MDBN_ROOT}/MDBN_run
+OUT_DIR=${MDBN_ROOT}/results
 PREFIX=OV
 BATCHLOG=batch.log
 

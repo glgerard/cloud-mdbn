@@ -41,14 +41,18 @@ class jobDescription():
 jobStatus = jobDescription()
 
 mdbn = None
+project = "OV"
 
-def prepare_OV_TCGA_datafiles(config, datadir='data'):
-    base_url = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3479191/bin/'
-    archive = 'supp_gks725_nar-00961-n-2012-File005.zip'
-
+def prepare_TCGA_datafiles(project, config, datadir='data'):
     datafiles = dict()
     for key in config["pathways"]:
         datafiles[key] = config['dbns'][key]["datafile"]
+
+    if project == "LAML":
+        return datafiles
+
+    base_url = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3479191/bin/'
+    archive = 'supp_gks725_nar-00961-n-2012-File005.zip'
 
     if not os.path.isdir(datadir):
         os.mkdir(datadir)
@@ -65,10 +69,10 @@ def prepare_OV_TCGA_datafiles(config, datadir='data'):
     os.chdir(root_dir)
     return datafiles
 
-def start_run(uuid, config):
+def start_run(uuid, project, config):
     global jobStatus
     jobStatus.set_status(BUSY, uuid)
-    datafiles = prepare_OV_TCGA_datafiles(config)
+    datafiles = prepare_TCGA_datafiles(project, config)
     len_classes = mdbn.run(config, datafiles)
     jobStatus.set_status(FREE, uuid)
 
@@ -98,7 +102,7 @@ def runCmd(uuid):
     if jobStatus.get_status() == FREE:
         config = request.json
         try:
-            thread = Thread(target=start_run, args=(uuid, config))
+            thread = Thread(target=start_run, args=(uuid, project, config))
             thread.start()
         except:
             logging.error('Unexpected error (%s): %s' % (uuid, sys.exc_info()[0]))
@@ -110,15 +114,16 @@ def runCmd(uuid):
 
 def main(argv, config_filename='ov_config.json'):
     global mdbn
+    global project
 
-    daemonized, port, config_filename, log_enabled, verbose = \
+    project, daemonized, port, config_filename, log_enabled, verbose = \
         read_cmdline(argv, config_filename)
 
-    mdbn = MDBN('OV_Batch',log_enabled=log_enabled, verbose=verbose)
+    mdbn = MDBN(project+'_Batch',log_enabled=log_enabled, verbose=verbose)
     if not daemonized:
         with open('%s' % config_filename) as config_file:
             config = json.load(config_file)
-            datafiles = prepare_OV_TCGA_datafiles(config)
+            datafiles = prepare_TCGA_datafiles(project,config)
             mdbn.run(config, datafiles)
     else:
         app.run(host='0.0.0.0',port=port, debug=False)

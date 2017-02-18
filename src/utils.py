@@ -185,13 +185,15 @@ def find_unique_classes(dbn_output):
     return classified_samples, distance_matrix
 
 def read_cmdline(argv, config_filename):
+    project="OV"
     log_enabled = False
     verbose = False
     daemonized = False
     port = 5000
 
     try:
-        opts, args = getopt.getopt(argv, "hc:dlp:v", ["help", "config=", "daemon", "log", "port=", "verbose"])
+        opts, args = getopt.getopt(argv, "ht:c:dlp:v", ["help", "tcga=", "config=", "daemon",
+                                                        "log", "port=", "verbose"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -199,6 +201,14 @@ def read_cmdline(argv, config_filename):
         if opt in ("-h", "--help"):
             usage()
             sys.exit()
+        elif opt in ("-t", "--tcga"):
+            try:
+                project = str(arg).upper()
+                if (project != "OV") and (project != "LAML"):
+                    raise ValueError()
+            except:
+                print('TCGA Project must be either OV or LAML',file=sys.stderr)
+                sys.exit(-1)
         elif opt in ("-v", "--verbose"):
             verbose = True
         elif opt in ("-c", "--config"):
@@ -218,12 +228,13 @@ def read_cmdline(argv, config_filename):
         else:
             assert False, "unhandled option"
 
-    return daemonized, port, config_filename, log_enabled, verbose
+    return project, daemonized, port, config_filename, log_enabled, verbose
 
 def usage():
     print("--help usage summary")
+    print("--tcga=[OV|LAML] define the TCGA Project. The default is OV")
     print("--config=filename configuration file")
     print("--daemon listen for a JSON config")
-    print("--port=port change the default listening port")
+    print("--port=port change the default listening port. The default port is 5000")
     print("--log=filename output file")
     print("--verbose print additional information during training")

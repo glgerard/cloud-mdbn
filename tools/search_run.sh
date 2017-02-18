@@ -1,4 +1,12 @@
 #!/bin/bash
+# Search the batch directory with the results of a particular configuration
+# Receives as input the search pattern which is typically a portion of the
+# short name of the configuration file
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <patter>"
+    exit -1
+fi
 
 pattern=$1
 

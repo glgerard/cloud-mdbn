@@ -1,10 +1,14 @@
 #!/bin/bash
-
 # Take an initialization csv from Excel and create a new ov_configs.csv
 # with standard format to be used by batch_run.py
 
-CONF_DIR=../config
-SRC_DIR=../src
+CONF_DIR=${MDBN_ROOT}/config
+SRC_DIR=${MDBN_ROOT}/src
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <config.csv>"
+    exit -1
+fi
 
 init=$1
 

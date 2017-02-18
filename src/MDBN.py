@@ -140,6 +140,8 @@ class MDBN(object):
 
         mdbnlogging.info("CONFIG_UUID:%s" % config_hash)
 
+        rng = numpy.random.RandomState(config["seed"])
+
         results = []
         for run in range(config["runs"]):
             #        try:
@@ -151,7 +153,8 @@ class MDBN(object):
                                     run=run,
                                     output_folder=batch_output_dir,
                                     network_file='Exp_%s_run_%d.npz' %
-                                                 (batch_start_date_str, run))
+                                                 (batch_start_date_str, run),
+                                    rng=rng)
             current_date_time = datetime.datetime.now()
             classes = find_unique_classes((dbn_output > 0.5) * numpy.ones_like(dbn_output))
             mdbnlogging.info('RUN:%i:classes identified:%d' % (run, numpy.max(classes[0]) + 1))

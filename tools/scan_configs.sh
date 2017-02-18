@@ -1,11 +1,16 @@
 #!/bin/bash
-
 # Scan configuration JSON files in the CONFIG_DIR that begins with PREFIX
 # convert them into a csv representation and appends them to a csv file.
 
 TOOLS_DIR=${MDBN_ROOT}/tools
-CONF_DIR=$1
 PREFIX=ov
+
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <config_dir>"
+    exit -1
+fi
+
+CONF_DIR=$1
 
 CWD=$(pwd)
 cd ${CONF_DIR}

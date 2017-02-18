@@ -158,8 +158,6 @@ class RBM(object):
         # See: Hinton, "A Practical Guide to Training Restricted Boltzmann Machines",
         # UTML TR 2010-003, 2010. Section 9
 
-#        self.momentum = tensor.cast(0, dtype=theano.config.floatX)
-
         self.reset_speed_params()
 
         self.speed_params = [self.W_speed, self.hbias_speed, self.vbias_speed]
@@ -325,7 +323,6 @@ class RBM(object):
         if persistent is None:
             chain_start = ph_sample
         else:
-#            chain_start = persistent[:batch_size]
             chain_start = persistent
 
         # perform actual negative phase
@@ -377,8 +374,6 @@ class RBM(object):
 
         if persistent:
             # Note that this works only if persistent is a shared variable
-#            updates[persistent] = tensor.set_subtensor(persistent[:batch_size],nh_samples[-1])
-#            updates[persistent] = tensor.set_subtensor(persistent, nh_samples[-1])
             updates[persistent] = nh_samples[-1]
             # pseudo-likelihood is a better proxy for PCD
             monitoring_cost = self.get_pseudo_likelihood_cost(updates)
@@ -515,7 +510,7 @@ class RBM(object):
         cost, updates = self.get_cost_updates(lr=learning_rate,
                                               k=k,
                                               weightcost=weightcost,
-#                                              batch_size=batch_size,
+                                              batch_size=batch_size,
                                               persistent=persistent_chain
                                             )
 
@@ -630,7 +625,6 @@ class RBM(object):
             plotting_stop = timeit.default_timer()
             plotting_time += (plotting_stop - plotting_start)
 
-        self.W = self.W / self.p
         end_time = timeit.default_timer()
 
         pretraining_time = (end_time - start_time) - plotting_time
@@ -860,10 +854,8 @@ class GRBM(RBM):
         # for CD, we use the newly generate hidden sample
         # for PCD, we initialize from the archived state of the chain
         if persistent is None:
-#            chain_start = ph_sample
             chain_start = ph_mean
         else:
-#            chain_start = persistent[:batch_size]
             chain_start = persistent
 
         # perform actual negative phase
@@ -910,7 +902,6 @@ class GRBM(RBM):
         multipliers = [
         # Issue: it returns Inf when Wij is small, therefore a small constant is added
             (1.0 - 2.0 * lr * lambdas[1]) / (1.0 + 2.0 * lr * lambdas[0] / (tensor.abs_(self.W) + epsilon)),
-#            (1.0 - 2.0 * lr * lambdas[1]),
             1.0,
             1.0]
 
@@ -921,9 +912,6 @@ class GRBM(RBM):
 
         if persistent:
             # Note that this works only if persistent is a shared variable
-#            updates[persistent] = tensor.set_subtensor(persistent[:batch_size],nh_samples[-1])
-#            updates[persistent] = tensor.set_subtensor(persistent,nh_samples[-1])
-#            updates[persistent] = nh_samples[-1]
             updates[persistent] = nh_means[-1]
             # pseudo-likelihood is a better proxy for PCD
             monitoring_cost = self.get_pseudo_likelihood_cost(updates)
