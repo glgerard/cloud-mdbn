@@ -4,16 +4,18 @@
 
 CONF_DIR=${MDBN_ROOT}/config
 SRC_DIR=${MDBN_ROOT}/src
+TOOLS_DIR=${MDBN_ROOT}/tools
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <config.csv>"
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <ov|aml> <config.csv>"
     exit -1
 fi
 
-init=$1
+project=$1
+initcsv=$2
 
-sed -e's/;/,/g' $init > ov_configs_tmp.csv
-python ${SRC_DIR}/csv_to_config.py ov_configs_tmp.csv ${CONF_DIR}/ov_config_template.json
-mv *.json ${CONF_DIR}
-./scan_configs.sh ${CONF_DIR}
-rm ov_configs_tmp.csv
+sed -e's/;/,/g' $initcsv > ${project}_configs_tmp.csv
+python ${SRC_DIR}/csv_to_config.py ${project}_configs_tmp.csv ${CONF_DIR}/${project}_config_template.json
+mv ${project}*.json ${CONF_DIR}
+${TOOLS_DIR}/scan_configs.sh ${project} ${CONF_DIR}
+rm ${project}_configs_tmp.csv

@@ -5,11 +5,11 @@
 MDBN_ROOT=${HOME}/SoftwareProjects/Thesis/cloud-mdbn
 
 if [ $# -ne 1 ]; then
-    echo "Usage: $0 <OV|LAML>"
+    echo "Usage: $0 <OV|AML>"
     exit -1
 fi
 
 project=$1
 
 cd ${MDBN_ROOT}
-${HOME}/Enthought/Canopy_64bit/User/bin/python src/main.py -d -v
+${HOME}/Enthought/Canopy_64bit/User/bin/python src/main.py -t $project -d -v

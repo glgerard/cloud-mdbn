@@ -3,14 +3,14 @@
 # convert them into a csv representation and appends them to a csv file.
 
 TOOLS_DIR=${MDBN_ROOT}/tools
-PREFIX=ov
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <config_dir>"
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <ov|aml> <config_dir>"
     exit -1
 fi
 
-CONF_DIR=$1
+PREFIX=$1
+CONF_DIR=$2
 
 CWD=$(pwd)
 cd ${CONF_DIR}

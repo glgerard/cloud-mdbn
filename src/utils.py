@@ -101,8 +101,8 @@ def load_n_preprocess_data(datafile,
     # Normalize the data so that each measurement on our population has zero
     # mean and zero variance
     zdata = stats.zscore(data, axis=0)
-    not_nan_ix = ~numpy.isnan(zdata).any(axis=1)
-    zdata = zdata[not_nan_ix]
+    not_nan_ix = ~numpy.isnan(zdata).any(axis=0)
+    zdata = zdata[:,not_nan_ix]
 
     if clip is not None:
         zdata = numpy.clip(zdata, clip[0], clip[1])
@@ -204,10 +204,10 @@ def read_cmdline(argv, config_filename):
         elif opt in ("-t", "--tcga"):
             try:
                 project = str(arg).upper()
-                if (project != "OV") and (project != "LAML"):
+                if (project != "OV") and (project != "AML"):
                     raise ValueError()
             except:
-                print('TCGA Project must be either OV or LAML',file=sys.stderr)
+                print('TCGA Project must be either OV or AML',file=sys.stderr)
                 sys.exit(-1)
         elif opt in ("-v", "--verbose"):
             verbose = True

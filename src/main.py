@@ -48,7 +48,7 @@ def prepare_TCGA_datafiles(project, config, datadir='data'):
     for key in config["pathways"]:
         datafiles[key] = config['dbns'][key]["datafile"]
 
-    if project == "LAML":
+    if project == "AML":
         return datafiles
 
     base_url = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3479191/bin/'
