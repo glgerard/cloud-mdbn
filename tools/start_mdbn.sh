@@ -2,8 +2,6 @@
 # Start the MDBN network in deamon node
 # Receives a single parameter, the TCGA project either OV or LAML
 
-MDBN_ROOT=${HOME}/SoftwareProjects/Thesis/cloud-mdbn
-
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <OV|AML>"
     exit -1
