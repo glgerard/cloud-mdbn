@@ -2,6 +2,7 @@
 # Scan configuration JSON files in the CONFIG_DIR that begins with PREFIX
 # convert them into a csv representation and appends them to a csv file.
 
+CONF_DIR=${MDBN_ROOT}/config
 TOOLS_DIR=${MDBN_ROOT}/tools
 
 if [ $# -ne 2 ]; then
@@ -10,13 +11,13 @@ if [ $# -ne 2 ]; then
 fi
 
 PREFIX=$1
-CONF_DIR=$2
+JSON_DIR=$2
 
 CWD=$(pwd)
-cd ${CONF_DIR}
+cd ${JSON_DIR}
 [ -f ${PREFIX}_configs.csv ] && rm ${PREFIX}_configs.csv
 
-cat ${PREFIX}_configs_header.csv > ${PREFIX}_configs.csv
+cat ${CONF_DIR}/${PREFIX}_configs_header.csv > ${PREFIX}_configs.csv
 
 for json in $(ls ${PREFIX}_config*.json); do
     echo $json

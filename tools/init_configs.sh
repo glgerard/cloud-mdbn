@@ -15,7 +15,6 @@ project=$1
 initcsv=$2
 
 sed -e's/;/,/g' $initcsv > ${project}_configs_tmp.csv
-python ${SRC_DIR}/csv_to_config.py ${project}_configs_tmp.csv ${CONF_DIR}/${project}_config_template.json
-mv ${project}*.json ${CONF_DIR}
-${TOOLS_DIR}/scan_configs.sh ${project} ${CONF_DIR}
+python ${SRC_DIR}/csv_to_config.py ${project}_configs_tmp.csv ${CONF_DIR}/${project}_template.json
+${TOOLS_DIR}/scan_configs.sh ${project} .
 rm ${project}_configs_tmp.csv

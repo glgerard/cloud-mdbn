@@ -1,0 +1,93 @@
+{
+    "dbns": {
+        "GE": {
+            "batchSize": 1, 
+            "datafile": "AML/AML_gene_expression_table2.csv.gz", 
+            "epochs": [
+                2, 
+                800
+            ], 
+            "k": 1, 
+            "lambdas": [
+                0.0, 
+                0.1
+            ], 
+            "layersNodes": [
+                400, 
+                40
+            ], 
+            "lr": [
+                0.0005, 
+                0.1
+            ], 
+            "persistent": false
+        }, 
+        "ME": {
+            "batchSize": 1, 
+            "datafile": "AML/AML_miRNA_Seq_table2.csv.gz", 
+            "epochs": [
+                2
+            ], 
+            "k": 10, 
+            "lambdas": [
+                0.0, 
+                0.1
+            ], 
+            "layersNodes": [
+                40
+            ], 
+            "lr": [
+                0.0005
+            ], 
+            "persistent": false
+        }, 
+        "SM": {
+            "batchSize": 1, 
+            "datafile": "AML/AML_somatic_mutations_table2.csv.gz", 
+            "epochs": [
+                2, 
+                800
+            ], 
+            "k": 1, 
+            "lambdas": [
+                0.0, 
+                0.1
+            ], 
+            "layersNodes": [
+                200, 
+                20
+            ], 
+            "lr": [
+                0.01, 
+                0.1
+            ], 
+            "persistent": false
+        }
+    }, 
+    "p": 1.0, 
+    "pathways": [
+        "ME", 
+        "GE", 
+        "SM"
+    ], 
+    "runs": 4, 
+    "seed": 1234, 
+    "top": {
+        "batchSize": 1, 
+        "epochs": [
+            800, 
+            800
+        ], 
+        "k": 1, 
+        "layersNodes": [
+            24, 
+            3
+        ], 
+        "lr": [
+            0.1, 
+            0.1
+        ], 
+        "persistent": false
+    }, 
+    "uuid": ""
+}
