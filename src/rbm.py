@@ -153,6 +153,7 @@ class RBM(object):
         # **** WARNING: It is not a good idea to put things in this list
         # other than shared variables created in this function.
         self.params = [self.W, self.hbias, self.vbias]
+        self.r_sample = None
 
         # Parameters to implement momentum
         # See: Hinton, "A Practical Guide to Training Restricted Boltzmann Machines",
@@ -644,7 +645,14 @@ class RBM(object):
         :return:
         """
 
-        plot_every = 500
+        if self.r_sample is None:
+            self.r_sample = theano.shared(value=numpy.ones((persistent_vis_chain.get_value().shape[0],
+                                                            self.n_hidden),
+                                                            dtype=theano.config.floatX),
+                                              name='r_sample',
+                                              borrow=True)
+
+        plot_every = 5
         # define one step of Gibbs sampling define a
         # function that does `plot_every` steps before returning the
         # sample for plotting
@@ -698,7 +706,14 @@ class RBM(object):
         :return:
         """
 
-        plot_every = 500
+        if self.r_sample is None:
+            self.r_sample = theano.shared(value=numpy.ones((persistent_hid_chain.get_value().shape[0],
+                                                            self.n_hidden),
+                                                            dtype=theano.config.floatX),
+                                              name='r_sample',
+                                              borrow=True)
+
+        plot_every = 50
         # define one step of Gibbs sampling define a
         # function that does `plot_every` steps before returning the
         # sample for plotting
