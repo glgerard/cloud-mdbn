@@ -1,14 +1,16 @@
 from __future__ import print_function
-import requests
-import sys
-import boto3
+
 import logging
+import sys
 import traceback
-from time import sleep
-from hashlib import md5
-from boto3.dynamodb.conditions import Key, Attr
 from datetime import datetime
+from time import sleep
+
+import requests
+from utils import run_completed
+
 from csv_to_config import csvToConfig
+from utils import get_dyndb_table
 
 host = 'taurus'
 port = 5000
@@ -20,42 +22,8 @@ region_name='eu-west-1'
 jobCompleted = False
 
 def main(configCsvFile, configJsonFile):
-    global table
-
-    client = boto3.client('dynamodb', region_name=region_name, endpoint_url=dynamodb_url)
-    list_tables = client.list_tables()
-    dynamodb = boto3.resource('dynamodb', region_name=region_name, endpoint_url=dynamodb_url)
-    if not 'jobs' in list_tables['TableNames']:
-        table = dynamodb.create_table(
-            TableName='jobs',
-            KeySchema=[
-                {
-                    'AttributeName': 'job',
-                    'KeyType': 'HASH'
-                },
-                {
-                    'AttributeName': 'run',
-                    'KeyType': 'RANGE'
-                }
-            ],
-            AttributeDefinitions=[
-                {
-                    'AttributeName': 'job',
-                    'AttributeType': 'S'
-                },
-                {
-                    'AttributeName': 'run',
-                    'AttributeType': 'N'
-                }
-            ],
-            ProvisionedThroughput={
-                'ReadCapacityUnits': 5,
-                'WriteCapacityUnits': 5
-            }
-        )
-        table.meta.client.get_waiter('table_exists').wait(TableName='jobs')
-    else:
-        table = dynamodb.Table('jobs')
+    global dyndb_table
+    dyndb_table = get_dyndb_table(dynamodb_url, region_name)
 
     try:
         csvToConfig(configCsvFile, configJsonFile, send_config)
@@ -78,18 +46,7 @@ def send_config(config, configFile = None):
 #    uuid = md5(str(config.values())).hexdigest()
     uuid = config['uuid']
 
-    response = table.query(
-        KeyConditionExpression=Key('job').eq(uuid)
-    )
-
-    done=False
-    for i in response['Items']:
-        done=True
-        print('Run with UUID %s already completed: run %s with %s classes' % (uuid, i['run'],
-                                                                             i['n_classes']))
-        print('Date: ' + datetime.fromtimestamp(i['timestamp']).strftime("%Y-%m-%d_%H%M"))
-
-    if done:
+    if run_completed(dyndb_table, uuid):
         return
 
     try:

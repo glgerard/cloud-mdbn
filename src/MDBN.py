@@ -26,16 +26,16 @@ All rights reserved.
 
 from __future__ import print_function, division
 import os
+import shutil
 import datetime
 from hashlib import md5
 import numpy
 import theano
 import sys
-import traceback
-import logging
 import mdbnlogging
 from utils import load_n_preprocess_data
 from utils import find_unique_classes
+from utils import write_config
 from dbn import DBN
 from six.moves import cPickle
 
@@ -83,36 +83,20 @@ def train_dbn(train_set, validation_set,
 
 class MDBN(object):
     def __init__(self,
-                 batch_dir_prefix=None,
-                 holdout_fraction=None,
-                 repeats=None,
-                 log_enabled=None,
-                 verbose=None,
-                 output_dir=None):
-        if holdout_fraction is None:
-            self.holdout_fraction = 0
-        else:
-            self.holdout_fraction = holdout_fraction
-        if repeats is None:
-            self.repeats = repeats
-        else:
-            self.repeats = 1
-        if log_enabled is None:
-            self.log_enabled = False
-        else:
-            self.log_enabled = log_enabled
-        if verbose is None:
-            self.verbose = False
-        else:
-            self.verbose = verbose
-        if batch_dir_prefix is None:
-            self.batch_dir_prefix = "batch"
-        else:
-            self.batch_dir_prefix = batch_dir_prefix
-        if output_dir is None:
-            self.output_dir = "MDBN_run"
-        else:
-            self.output_dir = output_dir
+                 batch_dir_prefix="batch",
+                 holdout_fraction=0,
+                 repeats=1,
+                 log_enabled=False,
+                 verbose=False,
+                 s3_bucket=None,
+                 output_dir="MDBN_run"):
+        self.holdout_fraction = holdout_fraction
+        self.repeats = 1
+        self.log_enabled = log_enabled
+        self.verbose = verbose
+        self.batch_dir_prefix = batch_dir_prefix
+        self.output_dir = output_dir
+        self.s3_bucket = s3_bucket
 
     def run(self, config, datafiles):
         config_hash = config['uuid']
@@ -124,7 +108,9 @@ class MDBN(object):
             os.mkdir(self.output_dir)
 
         batch_output_dir = '%s/%s_%s' % \
-                           (self.output_dir, self.batch_dir_prefix, batch_start_date_str)
+                           (self.output_dir, self.batch_dir_prefix, config_hash)
+#                           (self.output_dir, self.batch_dir_prefix, batch_start_date_str)
+
         if not os.path.isdir(batch_output_dir):
             os.mkdir(batch_output_dir)
 
@@ -153,7 +139,7 @@ class MDBN(object):
                                     run=run,
                                     output_folder=batch_output_dir,
                                     network_file='Exp_%s_run_%d.npz' %
-                                                 (batch_start_date_str, run),
+                                                 (config_hash, run),
                                     rng=rng)
             current_date_time = datetime.datetime.now()
             classes = find_unique_classes((dbn_output > 0.5) * numpy.ones_like(dbn_output))
@@ -168,9 +154,27 @@ class MDBN(object):
             #            traceback.format_exc()
         root_dir = os.getcwd()
         os.chdir(batch_output_dir)
-        numpy.savez('Results_%s.npz' % batch_start_date_str,
+        numpy.savez('Results_%s.npz' % config_hash,
                     results=results)
+        write_config(config, config['name'])
         os.chdir(root_dir)
+
+        if self.s3_bucket is not None:
+            try:
+                self.s3_bucket.upload_file(batch_output_dir + '/batch.log',
+                                           batch_output_dir + '/batch.log')
+                self.s3_bucket.upload_file(batch_output_dir + '/' +
+                                           'Results_%s.npz' % config_hash,
+                                           batch_output_dir + '/' +
+                                           'Results_%s.npz' % config_hash)
+                self.s3_bucket.upload_file(batch_output_dir + '/' + config['name'],
+                                      batch_output_dir + '/' + config['name'])
+                shutil.rmtree(batch_output_dir)
+            except OSError as e:
+                print("OS error ({0}): {1}".format(e.errno, e.strerror))
+            except:
+                print("Could not transfer %s to s3" % batch_output_dir, file=sys.stderr)
+
         len_classes = [numpy.max(classes) + 1 for classes in results]
         return len_classes
 
@@ -346,29 +350,41 @@ class MDBN(object):
                     )
         os.chdir(root_dir)
 
-def load_network(input_file, input_folder):
-    root_dir = os.getcwd()
-    # TODO: check if the input_folder exists
-    os.chdir(input_folder)
-    npz = numpy.load(input_file)
+        if self.s3_bucket is not None:
+            try:
+                self.s3_bucket.upload_file(output_folder + '/' + network_file,
+                                           output_folder + '/' + network_file)
+            except:
+                print("Could not transfer %s on s3" % network_file, file=sys.stderr)
 
-    config = npz['config'].tolist()
-    dbn_params = npz['dbn_params'].tolist()
+    def load_network(self, input_file, input_folder):
+        root_dir = os.getcwd()
+        # TODO: check if the input_folder exists
+        os.chdir(input_folder)
 
-    dbn_dict = {}
-    for key in config['pathways']+["top"]:
-        params=dbn_params[key]
-        if key != "top":
-            netConfig = config['dbns'][key]
-        else:
-            netConfig = config['top']
-        layer_sizes = netConfig['layersNodes']
-        dbn_dict[key] = DBN(n_ins=netConfig['inputNodes'],
-                            hidden_layers_sizes=layer_sizes[:-1],
-                            gauss=key!='top',
-                            n_outs=layer_sizes[-1],
-                            W_list=params['W'],b_list=params['hbias'],c_list=params['vbias'])
+        if self.s3_bucket is not None:
+            self.s3_bucket.download_file(input_file,
+                                         input_folder + '/' + input_file)
 
-    os.chdir(root_dir)
+        npz = numpy.load(input_file)
 
-    return config, dbn_dict
+        config = npz['config'].tolist()
+        dbn_params = npz['dbn_params'].tolist()
+
+        dbn_dict = {}
+        for key in config['pathways']+["top"]:
+            params=dbn_params[key]
+            if key != "top":
+                netConfig = config['dbns'][key]
+            else:
+                netConfig = config['top']
+            layer_sizes = netConfig['layersNodes']
+            dbn_dict[key] = DBN(n_ins=netConfig['inputNodes'],
+                                hidden_layers_sizes=layer_sizes[:-1],
+                                gauss=key!='top',
+                                n_outs=layer_sizes[-1],
+                                W_list=params['W'],b_list=params['hbias'],c_list=params['vbias'])
+
+        os.chdir(root_dir)
+
+        return config, dbn_dict

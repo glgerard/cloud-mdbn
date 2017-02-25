@@ -25,12 +25,18 @@ All rights reserved.
 """
 
 from __future__ import print_function
+
+import json
 import os
 import sys
 import getopt
 import gzip
+from datetime import datetime
+
 import numpy
 import theano
+import boto3
+from boto3.dynamodb.conditions import Key
 from scipy import stats
 from scipy.spatial import distance
 
@@ -166,7 +172,6 @@ def remap_class(classified_samples, distance_matrix, n_classes):
     new_classification = merge_classes(map=map, D=distance_matrix, n_classes=n_classes)
     return numpy.array([new_classification[i] for i in classified_samples])
 
-
 def find_unique_classes(dbn_output):
     # Find the unique node patterns present in the output
     tmp = numpy.ascontiguousarray(dbn_output).view(numpy.dtype(
@@ -184,16 +189,61 @@ def find_unique_classes(dbn_output):
 
     return classified_samples, distance_matrix
 
+def get_dyndb_table(dynamodb_url, region_name):
+    client = boto3.client('dynamodb', region_name=region_name, endpoint_url=dynamodb_url)
+    list_tables = client.list_tables()
+    dynamodb = boto3.resource('dynamodb', region_name=region_name, endpoint_url=dynamodb_url)
+    if not 'jobs' in list_tables['TableNames']:
+        table = dynamodb.create_table(
+            TableName='jobs',
+            KeySchema=[
+                {
+                    'AttributeName': 'job',
+                    'KeyType': 'HASH'
+                },
+                {
+                    'AttributeName': 'run',
+                    'KeyType': 'RANGE'
+                }
+            ],
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'job',
+                    'AttributeType': 'S'
+                },
+                {
+                    'AttributeName': 'run',
+                    'AttributeType': 'N'
+                }
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 5,
+                'WriteCapacityUnits': 5
+            }
+        )
+        table.meta.client.get_waiter('table_exists').wait(TableName='jobs')
+    else:
+        table = dynamodb.Table('jobs')
+
+    return table
+
 def read_cmdline(argv, config_filename):
     project="OV"
     log_enabled = False
     verbose = False
     daemonized = False
+    batch_dir = None
+    s3_bucket_name = None
     port = 5000
+#    dynamodb_url = "https://localhost:8000"
+    dynamodb_url = None
+    region_name = "eu-west-1"
 
     try:
-        opts, args = getopt.getopt(argv, "ht:c:dlp:v", ["help", "tcga=", "config=", "daemon",
-                                                        "log", "port=", "verbose"])
+        opts, args = getopt.getopt(argv, "ht:c:dp:b:s:u:r:lv",
+                                   ["help", "tcga=", "config=", "daemon",
+                                    "port=", "batch=", "s3=", "url=",
+                                    "region=", "log", "verbose"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -218,6 +268,15 @@ def read_cmdline(argv, config_filename):
         elif opt in ("-d", "--dameon"):
             log_enabled = True
             daemonized = True
+        elif opt in ("-b", "--batch"):
+            batch_dir = arg
+            daemonized = False
+        elif opt in ("-s", "--s3"):
+            s3_bucket_name = arg
+        elif opt in ("-u", "--url"):
+            dynamodb_url = arg
+        elif opt in ("-r", "--region"):
+            region_name = arg
         elif opt in ("-p", "--port"):
             try:
                 port = int(arg)
@@ -228,7 +287,10 @@ def read_cmdline(argv, config_filename):
         else:
             assert False, "unhandled option"
 
-    return project, daemonized, port, config_filename, log_enabled, verbose
+    return project, daemonized, port, batch_dir,\
+           config_filename, s3_bucket_name, \
+           dynamodb_url, region_name, \
+           log_enabled, verbose
 
 def usage():
     print("--help usage summary")
@@ -236,5 +298,28 @@ def usage():
     print("--config=filename configuration file")
     print("--daemon listen for a JSON config")
     print("--port=port change the default listening port. The default port is 5000")
+    print("--batch=batch_dir load configuration files from a directory")
+    print("--s3=bucket store the results on S3 bucket")
+    print("--url=url DynamoDB URL. The default is None")
+    print("--region=name AWS region name. The default is eu-west-1")
     print("--log=filename output file")
     print("--verbose print additional information during training")
+
+
+def write_config(config, configFile):
+    with open(configFile, 'w') as f:
+        json.dump(config, f, indent=4, sort_keys=True)
+
+
+def run_completed(dyndb_table, uuid):
+    done = False
+    response = dyndb_table.query(
+        KeyConditionExpression=Key('job').eq(uuid)
+    )
+    for i in response['Items']:
+        done = True
+        print('Run with UUID %s already completed: run %s with %s classes' %
+              (uuid, i['run'], i['n_classes']), file=sys.stderr)
+        print('Date: ' + datetime.fromtimestamp(i['timestamp']).strftime("%Y-%m-%d_%H%M"),
+              file=sys.stderr)
+    return done

@@ -1,6 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Scan configuration JSON files in the CONFIG_DIR that begins with PREFIX
 # convert them into a csv representation and appends them to a csv file.
+
+if [ -z "${MDBN_ROOT}" ]; then
+    echo "Error: MDBN_ROOT not defined. Please source env.sh"
+    exit -1
+fi
 
 CONF_DIR=${MDBN_ROOT}/config
 TOOLS_DIR=${MDBN_ROOT}/tools

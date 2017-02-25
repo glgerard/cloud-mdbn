@@ -8,12 +8,15 @@ import logging
 import traceback
 import time
 import boto3
+import glob
 
 from MDBN import MDBN
 from decimal import Decimal
 from flask import Flask
 from flask import request
 from utils import read_cmdline
+from utils import get_dyndb_table
+from utils import run_completed
 from threading import Thread
 
 app = Flask('cloud-mdbn')
@@ -39,9 +42,6 @@ class jobDescription():
         return status
 
 jobStatus = jobDescription()
-
-mdbn = None
-project = "OV"
 
 def prepare_TCGA_datafiles(project, config, datadir='data'):
     datafiles = dict()
@@ -69,18 +69,22 @@ def prepare_TCGA_datafiles(project, config, datadir='data'):
     os.chdir(root_dir)
     return datafiles
 
-def start_run(uuid, project, config):
+def start_run(config):
     global jobStatus
+    uuid = config['uuid']
+
+    if run_completed(dyndb_table, uuid):
+        return 'job_completed'
+
     jobStatus.set_status(BUSY, uuid)
     datafiles = prepare_TCGA_datafiles(project, config)
     len_classes = mdbn.run(config, datafiles)
     jobStatus.set_status(FREE, uuid)
 
     timestamp = time.time()
-    dynamodb = boto3.resource('dynamodb', region_name=region_name, endpoint_url=dynamodb_url)
-    table = dynamodb.Table('jobs')
     for run, len in enumerate(len_classes):
-        table.put_item(  # Add the completed job in DynamoDB
+        len = int(len)
+        dyndb_table.put_item(  # Add the completed job in DynamoDB
             Item={
                 'job': uuid,
                 'run': run,
@@ -98,35 +102,64 @@ def statusCmd():
 
 @app.route('/run/<uuid>', methods=['POST'])
 def runCmd(uuid):
-    global jobStatus
     if jobStatus.get_status() == FREE:
         config = request.json
-        try:
-            thread = Thread(target=start_run, args=(uuid, project, config))
-            thread.start()
-        except:
-            logging.error('Unexpected error (%s): %s' % (uuid, sys.exc_info()[0]))
-            logging.error('Unexpected error:(%s): %s' % (uuid, sys.exc_info()[1]))
-            traceback.format_exc()
-        return uuid
+        if uuid == config['uuid']:
+            try:
+                thread = Thread(target=start_run, args=(config))
+                thread.start()
+            except:
+                logging.error('Unexpected error (%s): %s' % (uuid, sys.exc_info()[0]))
+                logging.error('Unexpected error:(%s): %s' % (uuid, sys.exc_info()[1]))
+                traceback.format_exc()
+            return uuid
+        else:
+            return uuid, 400
     else:
         return uuid, 403
 
 def main(argv, config_filename='ov_config.json'):
     global mdbn
     global project
+    global s3_bucket
+    global dyndb_table
 
-    project, daemonized, port, config_filename, log_enabled, verbose = \
+    project, daemonized, port, batch_dir, \
+    config_filename, s3_bucket_name, \
+    dynamodb_url, region_name, \
+    log_enabled, verbose = \
         read_cmdline(argv, config_filename)
 
-    mdbn = MDBN(project+'_Batch',log_enabled=log_enabled, verbose=verbose)
+    dyndb_table = get_dyndb_table(dynamodb_url, region_name)
+
+    if s3_bucket_name is not None:
+        s3 = boto3.resource('s3')
+        s3_bucket = s3.Bucket(s3_bucket_name)
+    else:
+        s3_bucket = None
+
+    mdbn = MDBN(project+'_Batch',log_enabled=log_enabled, verbose=verbose,
+                s3_bucket=s3_bucket)
+
     if not daemonized:
-        with open('%s' % config_filename) as config_file:
-            config = json.load(config_file)
-            datafiles = prepare_TCGA_datafiles(project,config)
-            mdbn.run(config, datafiles)
+        if batch_dir is None:
+            runConfig(config_filename)
+        else:
+            config_files = glob.glob('%s/%s*.json' %
+                                     (batch_dir, project.lower()))
+            for config_filename in config_files:
+                runConfig(config_filename)
     else:
         app.run(host='0.0.0.0',port=port, debug=False)
+
+def runConfig(config_filename):
+    try:
+        config_file = open('%s' % config_filename)
+        config = json.load(config_file)
+        start_run(config)
+    except IOError as e:
+        print("Could not open %s " % config_filename)
+        print("I/O error ({0}): {1}".format(e.errno, e.strerror))
 
 if __name__ == '__main__':
     main(sys.argv[1:])

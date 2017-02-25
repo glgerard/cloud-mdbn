@@ -1,20 +1,24 @@
 from __future__ import print_function
-import sys
-import json
-import csv
+
 import copy
+import csv
+import json
+import sys
 from ast import literal_eval
+
+from utils import write_config
 
 def csvToConfig(configCsvFile, configJsonFile, callback_fn):
     with open(configJsonFile,'r') as jsonfile:
         templateConfig = json.load(jsonfile)
-
 
     with open(configCsvFile, 'r') as csvfile:
         csvreader = csv.DictReader(csvfile, delimiter=',')
         for row in csvreader:
             config = copy.deepcopy(templateConfig)
 
+            config['uuid'] = row['uuid']
+            config['name'] = row['config_file']
             config["seed"] = literal_eval(row["seed"])
             config["runs"] = literal_eval(row["runs"])
             config["p"] = literal_eval(row["p"])
@@ -41,15 +45,13 @@ def csvToConfig(configCsvFile, configJsonFile, callback_fn):
                                 netConfig[key] = literal_eval(row[colL2])
                             except:
                                 netConfig[key] = row[colL2]
+
             config['pathways'] = pathways
-            config['uuid'] = row['uuid']
-            callback_fn(config, row['config_file'])
+
+            callback_fn(config, config['name'])
 
     return
 
-def write_config(config, configFile):
-    with open(configFile, 'w') as f:
-        json.dump(config, f, indent=4, sort_keys=True)
 
 if __name__ == '__main__':
     if(len(sys.argv)<3):

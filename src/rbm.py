@@ -754,7 +754,7 @@ class RBM(object):
             # because successive samples in the chain are too correlated
             print(' ... computing sample %d' % idx)
             vis_mf, vis_sample = sample_fn()
-            samples.append(vis_mf)
+            samples.append(vis_sample)
 
         return samples
 
