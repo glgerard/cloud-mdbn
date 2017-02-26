@@ -13,4 +13,4 @@ fi
 
 batch_dir=$1
 
-aws s3 sync --dryrun $batch_dir s3://unipv-mdbn-${S3ID}/queue
+aws s3 sync $batch_dir s3://unipv-mdbn-${S3ID}/queue
