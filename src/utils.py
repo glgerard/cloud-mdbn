@@ -62,8 +62,15 @@ def import_TCGA_data(file, datadir, dtype):
                          usecols=range(1, ncols))
 
     os.chdir(root_dir)
-    return (data.shape[1], data.T)
 
+    data = data.T
+    # Normalize the data so that each measurement on our population has zero
+    # mean and zero variance
+    zdata = stats.zscore(data, axis=0)
+    not_nan_ix = ~numpy.isnan(zdata).any(axis=0)
+    zdata = zdata[:,not_nan_ix]
+
+    return zdata
 
 def get_minibatches_idx(n, batch_size, rng=None):
     """
@@ -88,7 +95,6 @@ def get_minibatches_idx(n, batch_size, rng=None):
 
     return range(len(minibatches)), minibatches
 
-
 def load_n_preprocess_data(datafile,
                            holdout_fraction=0.0,
                            repeats=1,
@@ -99,16 +105,10 @@ def load_n_preprocess_data(datafile,
                            rng=None,
                            dtype=theano.config.floatX):
 
-    n_data, data = import_TCGA_data(datafile, datadir, dtype)
+    zdata = import_TCGA_data(datafile, datadir, dtype)
 
     if transform_fn is not None:
-        data = transform_fn(data, exponent)
-
-    # Normalize the data so that each measurement on our population has zero
-    # mean and zero variance
-    zdata = stats.zscore(data, axis=0)
-    not_nan_ix = ~numpy.isnan(zdata).any(axis=0)
-    zdata = zdata[:,not_nan_ix]
+        zdata = transform_fn(zdata, exponent)
 
     if clip is not None:
         zdata = numpy.clip(zdata, clip[0], clip[1])
@@ -116,6 +116,8 @@ def load_n_preprocess_data(datafile,
     # replicate the samples
     if repeats > 1:
         zdata = numpy.repeat(zdata, repeats=repeats, axis=0)
+
+    n_data = zdata.shape[0]
 
     validation_set_size = int(n_data * holdout_fraction)
 
@@ -294,7 +296,7 @@ def read_cmdline(argv, config_filename):
 
 def usage():
     print("--help usage summary")
-    print("--tcga=[OV|LAML] define the TCGA Project. The default is OV")
+    print("--tcga=[OV|AML] define the TCGA Project. The default is OV")
     print("--config=filename configuration file")
     print("--daemon listen for a JSON config")
     print("--port=port change the default listening port. The default port is 5000")
