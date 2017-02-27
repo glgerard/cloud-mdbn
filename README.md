@@ -33,7 +33,7 @@ The full set of command options is documented below
     --log=filename output file
     --verbose print additional information during training
 
-##### How to create configuration files from a CSV initialization file
+## How to create configuration files from a CSV initialization file
 
 If you have a need to run a batch of experiments with different network architectures
 and different hyper-parameters the script `tools/init_configs.sh` will transform a
