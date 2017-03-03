@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Initialize the S3 bucket to store the configuration files for batch execution
 
-if [ -z "${S3ID}" ]; then
-    echo "Error: S3ID not defined. Please source env.sh"
+if [ -z "${S3BUCKET}" ]; then
+    echo "Error: S3BUCKET not defined. Please source env.sh"
     exit -1
 fi
 
-BucketName=unipv-mdbn-$S3ID
+BucketName=$S3BUCKET
 
 aws s3 mb s3://${BucketName}/queue
 

@@ -1,7 +1,6 @@
 from __future__ import print_function
 import sys
 import json
-from hashlib import md5
 
 def main(argv):
     configJsonFile = argv[0]
@@ -35,7 +34,7 @@ def main(argv):
                 else:
                     print("NA", end=',')
 
-    config_hash = md5(str(config.values())).hexdigest()
+    config_hash = config['uuid']
     print(config_hash)
 
     return

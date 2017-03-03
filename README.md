@@ -5,6 +5,9 @@ two types of TCGA tumoral genetic data: Ovarian cancer and Acute Myeloid Leukemi
 
 The network architecture and tuning hyperparameters are configured with a JSON file.
 
+Detail instructions on how to setup your work enviroment and test the configuration
+are contained in [HOWTO](doc/HOWTO.md).
+
 Once you have cloned the repository the analysis can be started interactively with
 the following command
 

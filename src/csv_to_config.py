@@ -5,6 +5,7 @@ import csv
 import json
 import sys
 from ast import literal_eval
+from hashlib import md5
 
 from utils import write_config
 
@@ -17,7 +18,6 @@ def csvToConfig(configCsvFile, configJsonFile, callback_fn):
         for row in csvreader:
             config = copy.deepcopy(templateConfig)
 
-            config['uuid'] = row['uuid']
             config['name'] = row['config_file']
             config["seed"] = literal_eval(row["seed"])
             config["runs"] = literal_eval(row["runs"])
@@ -47,6 +47,7 @@ def csvToConfig(configCsvFile, configJsonFile, callback_fn):
                                 netConfig[key] = row[colL2]
 
             config['pathways'] = pathways
+            config['uuid'] = md5(str(config.values())).hexdigest()
 
             callback_fn(config, config['name'])
 
