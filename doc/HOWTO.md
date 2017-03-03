@@ -32,8 +32,9 @@ This will create a run for the Ovarian cancer data
     cd ..
     python src/main.py -c config/ov_config_2_1.json -l -v
     
-At the end of the run (it might take 1 hour or more depending on your hardware
-configuration) this will produce the following structure
+At the end of the 5 runs which take about 40 minutes to complete on a
+i5-4690K CPU with a GeForce 1070 GPU, you will get the following
+content in the directory `MDBN_run`
 
     MDBN_run/
     └── OV_Batch_c714f750448bae901740f8f2866f36ea
