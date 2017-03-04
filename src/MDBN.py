@@ -152,12 +152,12 @@ class MDBN(object):
             #            logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[0]))
             #            logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[1]))
             #            traceback.format_exc()
-        root_dir = os.getcwd()
-        os.chdir(batch_output_dir)
-        numpy.savez('Results_%s.npz' % config_hash,
-                    results=results)
-        write_config(config, config['name'])
-        os.chdir(root_dir)
+#        root_dir = os.getcwd()
+#        os.chdir(batch_output_dir)
+#        numpy.savez('Results_%s.npz' % config_hash,
+#                    results=results)
+#        write_config(config, config['name'])
+#        os.chdir(root_dir)
 
         if self.s3_bucket is not None:
             try:
