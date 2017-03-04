@@ -142,6 +142,13 @@ Once you have the IP address you can connect with
 where I assumed that `~/mykey.pem` is the private key file associated to the
 _mykey_ key pair.
 
+You can check the status of the initialization by looking at the file
+
+    tail -20 /var/log/cloud-init-output.log
+    
+If everything worked as expected the data will now be uploaded
+on the S3 bucket you previously defined.
+
 When you have finished your experiments make sure to destroy the stack 
 
     aws cloudformation delete-stack --stack-name mdbn
