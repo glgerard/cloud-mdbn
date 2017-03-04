@@ -30,7 +30,13 @@ This will create a run for the Ovarian cancer data
     init_configs.sh ov ov_configs_2017_02_20_1133_init.csv
     cd ..
     python src/main.py -t OV -c config/ov_config_20_1_05.json -l -v
-    
+
+The first time you run the command you will obtain the following message
+
+    Downloading TCGA_Data from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3479191/bin/
+
+This is normal as we are downloading the original data for the first run.
+
 At the end of the 5 runs which take about 40 minutes to complete on a
 i5-4690K CPU with a GeForce 1070 GPU, you will get the following
 content in the directory `MDBN_run`

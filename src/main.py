@@ -2,9 +2,8 @@ from __future__ import print_function
 import os
 import sys
 import zipfile
-import urllib
 import requests
-import shutil
+import StringIO
 import json
 import logging
 import traceback
@@ -49,7 +48,7 @@ def prepare_TCGA_datafiles(project, config, datadir='data'):
     if project == "AML":
         return datafiles
 
-    base_url = 'https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3479191/bin/'
+    base_url = 'http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3479191/bin/'
     archive = 'supp_gks725_nar-00961-n-2012-File005.zip'
 
     if not os.path.isdir(datadir):
@@ -64,17 +63,15 @@ def prepare_TCGA_datafiles(project, config, datadir='data'):
                 try:
 #                    testfile = urllib.URLopener()
 #                    testfile.retrieve(base_url + archive, archive)
-                    r = requests.get(base_url + archive, verify=False)
+                    r = requests.get(base_url + archive, stream=True)
                     if r.status_code == requests.codes.ok:
-                        with open(archive, 'wb') as f:
-                            r.raw.decode_content = True
-                            shutil.copyfileobj(r.raw, f)
+                        zipfile.ZipFile(
+                            StringIO.StringIO(r.content)).extractall()
                     else:
                         r.raise_for_status()
-                except IOError as e:
-                    print("I/O error ({0}): {1}".format(e.errno, e.strerror))
+                except:
+                    print("Error ({0}): {1}".format(sys.exc_info()[0], sys.exc_info()[1]))
                     sys.exit(-1)
-            zipfile.ZipFile(archive, 'r').extract(datafile)
     os.chdir(root_dir)
     return datafiles
 
