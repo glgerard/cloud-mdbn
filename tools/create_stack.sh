@@ -7,6 +7,10 @@ fi
 
 s3bucket=$1
 
+aws s3 cp server-cloudformation.json s3://${s3bucket}
+
+region=$(aws configure get region)
+
 az=$(aws ec2 describe-availability-zones \
     --query 'AvailabilityZones[0].ZoneName' --output text)
 vpc=$(aws ec2 describe-vpcs --filter "Name=isDefault, Values=true" \
@@ -17,7 +21,7 @@ subnet=$(aws ec2 describe-subnets \
 
 aws cloudformation create-stack --stack-name mdbn \
     --capabilities CAPABILITY_IAM --template-url \
-https://s3-eu-west-1.amazonaws.com/unipv-mdbn-ggerard/server-cloudformation.json \
+https://s3-${region}.amazonaws.com/${s3bucket}/server-cloudformation.json \
     --parameters \
             ParameterKey=KeyName,ParameterValue=mykey \
             ParameterKey=AvZone,ParameterValue=$az \

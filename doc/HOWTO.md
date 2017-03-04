@@ -29,7 +29,7 @@ This will create a run for the Ovarian cancer data
     cd config
     init_configs.sh ov ov_configs_2017_02_20_1133_init.csv
     cd ..
-    python src/main.py -c config/ov_config_2_1.json -l -v
+    python src/main.py -t OV -c config/ov_config_20_1_05.json -l -v
     
 At the end of the 5 runs which take about 40 minutes to complete on a
 i5-4690K CPU with a GeForce 1070 GPU, you will get the following
@@ -46,18 +46,42 @@ content in the directory `MDBN_run`
 
 To monitor progress you can use the following command
 
-    tail -f MDBN_run/OV_Batch_c714f750448bae901740f8f2866f36ea/batch.log
+    tail -f ${MDBN_ROOT}/MDBN_run/OV_Batch_c714f750448bae901740f8f2866f36ea/batch.log
     
-The data can be reviewed with a jupyter notebook. From the root directory of
+The data can be reviewed with a Jupyter notebook. From the root directory of
 the repository run
 
     jupyter notebook
     
-Browse to the `notebooks` directory and open `OV-2_1.ipynb`.
+Browse to the `notebooks` directory and open `View OV-20_1_05.ipynb`.
+
+You can now test a run with AML data. To do this execute the following commands
+
+    cd ${MDBN_ROOT}/config
+    init_configs.sh aml aml_configs_2017_02_20_2050_init.csv
+    cd ..
+    python src/main.py -c config/aml_config_20_1_05.json -l -v
     
+At the end of the 5 runs you will get the following new content
+    
+As before progress can be monitored via
+    
+    tail -f ${MDBN_ROOT}/MDBN_run/AML_Batch_...
+    
+The data can be reviewied instead via the Jupyter notebook. In case you have stopped
+it restart as before and open the notebook `notebooks/View AML-20_1_05.ipynb`.
+
 # AWS EC2 installation
 
 On a Unix like environment (Linux/macOS) install the AWS command line.
+The easiest way to do it is by running
+
+    pip install awscli
+    
+You will then have to setup your credentials by running
+
+    aws configure
+
 Refer to [Installing the AWS Command Line Interface](http://docs.aws.amazon.com/cli/latest/userguide/installing.html)
 for details.
 

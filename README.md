@@ -31,6 +31,7 @@ The full set of command options is documented below
     --port=port change the default listening port. The default port is 5000
     --batch=batch_dir load configuration files from a directory
     --s3=bucket store the results on S3 bucket
+    --dynamodb store job status on DynamoDB
     --url=url DynamoDB URL. The default is None
     --region=name AWS region name. The default is eu-west-1
     --log=filename output file

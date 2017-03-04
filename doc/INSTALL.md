@@ -105,11 +105,12 @@ http://docs.enthought.com/canopy/quick-start/install_linux.html)
 
 ## Install Theano
 
-Open a terminal and at the prompt type
-
-	activate_canopy
+Open a new terminal and at the prompt type. Make sure
+that you are using Enthought Canopy python (verify with
+`which python`)
 
 	pip install Theano
+
 
 Create a file `~/.theanorc` with the following content
 

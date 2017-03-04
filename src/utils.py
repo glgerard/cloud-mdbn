@@ -319,6 +319,9 @@ def write_config(config, configFile):
 
 def run_completed(dyndb_table, uuid):
     done = False
+    if dyndb_table is None:
+        return done
+
     response = dyndb_table.query(
         KeyConditionExpression=Key('job').eq(uuid)
     )
