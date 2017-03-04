@@ -68,15 +68,15 @@ You can now test a run with AML data. To do this execute the following commands
     cd ..
     python src/main.py -t AML -c config/aml_config_20_1_05.json -l -v
     
-At the end of the 5 runs you will get the following new content under `MDBN_run`
+At the end of the 4 runs you will get the following new content under `MDBN_run`
 
     AML_Batch_eb6856a251bb8680da6593de98db7b5a/
+    ├── aml_config_20_1_05.json
     ├── batch.log
     ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_0.npz
     ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_1.npz
     ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_2.npz
-    ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_3.npz
-    └── aml_config_20_1_05.json
+    └── Exp_eb6856a251bb8680da6593de98db7b5a_run_3.npz
     
 As before progress can be monitored via
     
