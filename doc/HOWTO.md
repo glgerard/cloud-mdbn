@@ -2,17 +2,13 @@
 
 ## Environment
 
-Please make sure you are running with the following setup
+Please make sure you are already using the following development environment or refer to
+[INSTALL](doc/INSTALL.md) for detailed instructions on how to set it up.
+
 * [Ubuntu 16.04 LTS](http://releases.ubuntu.com/16.04/)
 * [Enthought Canopy](https://www.enthought.com/products/canopy/).
-See [Linux Installation](http://docs.enthought.com/canopy/quick-start/install_linux.html)
-for detailed installation instructions.
 * In order to use GPU acceleration on your workstation you will have to install
 [Nvidia CUDA 8.0](https://developer.nvidia.com/cuda-downloads) for Ubuntu 16.04.
-Refer to [CUDA Quick Start Guide](http://developer.download.nvidia.com/compute/cuda/8.0/secure/Prod2/docs/sidebar/CUDA_Quick_Start_Guide.pdf) 
-for detailed installation instructions.
-
-See [INSTALL](doc/INSTALL.md) for detailed instructions on how to set-up the environment.
 
 Launch the Canopy Package Manager and install the following package
 * flask
