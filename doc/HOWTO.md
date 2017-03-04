@@ -129,9 +129,15 @@ with the reverse DNS name of your institutional domain.
 The last command will automatically launch a batch run of all the configuration
 files under the `queue` directory on a t.micro EC2 instance .
 
-You can also access the instance by running this command
+You can also access the instance by checking the public IP address of the EC2 instance
+with this command
 
-    ssh -i ~/mykey.pem ubuntu@`get_aws_ec2.sh`
+    ec2ip = $(aws cloudformation describe-stacks --stack-name mdbn \
+    --query Stacks[0].Outputs[0].OutputValue | sed -e's/"//g')
+    
+Once you have the IP address you can connect with
+
+    ssh -i ~/mykey.pem ubuntu@$ec2ip
 
 where I assumed that `~/mykey.pem` is the private key file associated to the
 _mykey_ key pair.
