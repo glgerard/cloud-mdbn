@@ -41,14 +41,14 @@ At the end of the 5 runs which take about 40 minutes to complete on a
 i5-4690K CPU with a GeForce 1070 GPU, you will get the following
 content in the directory `MDBN_run`
 
-    MDBN_run/
-    └── OV_Batch_c714f750448bae901740f8f2866f36ea
-        ├── batch.log
-        ├── Exp_c714f750448bae901740f8f2866f36ea_run_0.npz
-        ├── Exp_c714f750448bae901740f8f2866f36ea_run_1.npz
-        └── Exp_c714f750448bae901740f8f2866f36ea_run_2.npz
-        └── Exp_c714f750448bae901740f8f2866f36ea_run_3.npz
-        └── Exp_c714f750448bae901740f8f2866f36ea_run_4.npz
+    OV_Batch_73dab4ea3383b2666d1220969a7feba8/
+    ├── batch.log
+    ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_0.npz
+    ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_1.npz
+    ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_2.npz
+    ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_3.npz
+    ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_4.npz
+    ├── ov_config_20_1_05.json
 
 To monitor progress you can use the following command
 
@@ -66,9 +66,12 @@ You can now test a run with AML data. To do this execute the following commands
     cd ${MDBN_ROOT}/config
     init_configs.sh aml aml_configs_2017_02_20_2050_init.csv
     cd ..
-    python src/main.py -c config/aml_config_20_1_05.json -l -v
+    python src/main.py -t AML -c config/aml_config_20_1_05.json -l -v
     
-At the end of the 5 runs you will get the following new content
+At the end of the 5 runs you will get the following new content under `MDBN_run`
+
+
+
     
 As before progress can be monitored via
     
