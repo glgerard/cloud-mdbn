@@ -37,7 +37,7 @@ The first time you run the command you will obtain the following message
 
 This is normal as we are downloading the original data for the first run.
 
-At the end of the 5 runs which take about 40 minutes to complete on a
+At the end of the 5 runs which take about 50 minutes to complete on a
 i5-4690K CPU with a GeForce 1070 GPU, you will get the following
 content in the directory `MDBN_run`
 
@@ -59,7 +59,7 @@ the repository run
 
     jupyter notebook
     
-Browse to the `notebooks` directory and open `View OV-20_1_05.ipynb`.
+Browse to the `notebooks` directory and open `View-OV-20_1_05.ipynb`.
 
 You can now test a run with AML data. To do this execute the following commands
 
@@ -70,15 +70,19 @@ You can now test a run with AML data. To do this execute the following commands
     
 At the end of the 5 runs you will get the following new content under `MDBN_run`
 
-
-
+    AML_Batch_eb6856a251bb8680da6593de98db7b5a/
+    ├── batch.log
+    ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_0.npz
+    ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_1.npz
+    ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_2.npz
+    └── Exp_eb6856a251bb8680da6593de98db7b5a_run_3.npz
     
 As before progress can be monitored via
     
-    tail -f ${MDBN_ROOT}/MDBN_run/AML_Batch_...
+    tail -f ${MDBN_ROOT}/MDBN_run/AML_Batch_eb6856a251bb8680da6593de98db7b5a/batch.log
     
 The data can be reviewied instead via the Jupyter notebook. In case you have stopped
-it restart as before and open the notebook `notebooks/View AML-20_1_05.ipynb`.
+it restart as before and open the notebook `notebooks/View-AML-20_1_05.ipynb`.
 
 # AWS EC2 installation
 
@@ -98,14 +102,20 @@ Make sure you have a Key pair named _mykey_ in your AWS account. Refer to
 [Amazon EC2 Key Pairs](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html)
 for instructions how to create the key pair.
 
-Go to the root directory of the repository and run
+Go to the root directory of the repository and first set the `S3_BUCKET` variable
+to a unique AWS bucket name of your choice
+
+    S3_BUCKET=your-bucket-name
+    
+You can now create a stack and launch a batch of configurations with the
+following commands
 
     source tools/env.sh
     mkdir queue
     cd queue
     init_configs.sh ov ../config/ov_aws_init.csv
-    sync_s3.sh . aws-your-bucket-name
-    create_stack aws-your-bucket-name
+    sync_s3.sh . $S3_BUCKET
+    create_stack $S3_BUCKET
     
 Replace the string `aws-your-bucket-name` with a unique identifier of your choice.
 This will be the S3 bucket where the results will be stored. It must be unique not to
@@ -122,7 +132,7 @@ You can also access the instance by running this command
 where I assumed that `~/mykey.pem` is the private key file associated to the
 _mykey_ key pair.
 
-Make sure to destroy the stack when you have finished your experiments with
+When you have finished your experiments with make sure to destroy the stack 
 
     aws cloudformation delete-stack --stack-name mdbn
 
