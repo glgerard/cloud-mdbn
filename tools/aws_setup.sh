@@ -28,4 +28,4 @@ git clone $REPO
 cd cloud-mdbn
 source tools/env.sh
 aws s3 sync s3://${S3_BUCKET}/queue queue
-python src/main.py -b config/queue -s ${S3_BUCKET} -l -v
+python src/main.py -b config/queue -s ${S3_BUCKET} -y -l -v

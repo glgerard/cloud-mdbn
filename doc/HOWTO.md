@@ -48,7 +48,7 @@ content in the directory `MDBN_run`
     ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_2.npz
     ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_3.npz
     ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_4.npz
-    ├── ov_config_20_1_05.json
+    └── ov_config_20_1_05.json
 
 To monitor progress you can use the following command
 
@@ -75,7 +75,8 @@ At the end of the 5 runs you will get the following new content under `MDBN_run`
     ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_0.npz
     ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_1.npz
     ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_2.npz
-    └── Exp_eb6856a251bb8680da6593de98db7b5a_run_3.npz
+    ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_3.npz
+    └── aml_config_20_1_05.json
     
 As before progress can be monitored via
     
