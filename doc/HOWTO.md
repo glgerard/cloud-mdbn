@@ -12,12 +12,15 @@ for detailed installation instructions.
 Refer to [CUDA Quick Start Guide](http://developer.download.nvidia.com/compute/cuda/8.0/secure/Prod2/docs/sidebar/CUDA_Quick_Start_Guide.pdf) 
 for detailed installation instructions.
 
+See [INSTALL](doc/INSTALL.md) for detailed instructions on how to set-up the environment.
+
 Launch the Canopy Package Manager and install the following package
 * flask
 
 From a terminal run the following commands (make sure Canopy is your default
 Python environment)
 
+    sudo apt-get install git
     pip install boto3
     pip install Theano
 
