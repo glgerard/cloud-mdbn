@@ -2,8 +2,8 @@
 
 ## Environment
 
-Please make sure you are already using the following development environment or refer to
-[INSTALL](INSTALL.md) for detailed instructions on how to set it up.
+Please make sure you are already using the following development environment or
+refer to [INSTALL](INSTALL.md) for detailed instructions on how to set it up.
 
 * [Ubuntu 16.04 LTS](http://releases.ubuntu.com/16.04/)
 * [Enthought Canopy](https://www.enthought.com/products/canopy/).

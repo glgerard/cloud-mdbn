@@ -238,13 +238,14 @@ def read_cmdline(argv, config_filename):
     s3_bucket_name = None
     port = 5000
 #    dynamodb_url = "https://localhost:8000"
+    dynamodb = False
     dynamodb_url = None
     region_name = "eu-west-1"
 
     try:
-        opts, args = getopt.getopt(argv, "ht:c:dp:b:s:u:r:lv",
+        opts, args = getopt.getopt(argv, "ht:c:dp:b:s:yu:r:lv",
                                    ["help", "tcga=", "config=", "daemon",
-                                    "port=", "batch=", "s3=", "url=",
+                                    "port=", "batch=", "s3=", "dynamodb", "url=",
                                     "region=", "log", "verbose"])
     except getopt.GetoptError:
         usage()
@@ -275,6 +276,8 @@ def read_cmdline(argv, config_filename):
             daemonized = False
         elif opt in ("-s", "--s3"):
             s3_bucket_name = arg
+        elif opt in ("-y", "--dynamodb"):
+            dynamodb = True
         elif opt in ("-u", "--url"):
             dynamodb_url = arg
         elif opt in ("-r", "--region"):
@@ -291,7 +294,7 @@ def read_cmdline(argv, config_filename):
 
     return project, daemonized, port, batch_dir,\
            config_filename, s3_bucket_name, \
-           dynamodb_url, region_name, \
+           dynamodb, dynamodb_url, region_name, \
            log_enabled, verbose
 
 def usage():
@@ -302,6 +305,7 @@ def usage():
     print("--port=port change the default listening port. The default port is 5000")
     print("--batch=batch_dir load configuration files from a directory")
     print("--s3=bucket store the results on S3 bucket")
+    print("--dynamodb store job status on DynamoDB")
     print("--url=url DynamoDB URL. The default is None")
     print("--region=name AWS region name. The default is eu-west-1")
     print("--log=filename output file")

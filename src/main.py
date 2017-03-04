@@ -21,10 +21,6 @@ from threading import Thread
 
 app = Flask('cloud-mdbn')
 
-# Local DynamoDB instance
-dynamodb_url="http://localhost:8000"
-region_name='eu-west-1'
-
 BUSY = 10
 FREE = 0
 
@@ -84,15 +80,16 @@ def start_run(config):
     timestamp = time.time()
     for run, len in enumerate(len_classes):
         len = int(len)
-        dyndb_table.put_item(  # Add the completed job in DynamoDB
-            Item={
-                'job': uuid,
-                'run': run,
-                'timestamp': Decimal(timestamp),
-                'status': 'DONE',
-                'n_classes': len
-            }
-    )
+        if dyndb_table is not None:
+            dyndb_table.put_item(  # Add the completed job in DynamoDB
+                Item={
+                    'job': uuid,
+                    'run': run,
+                    'timestamp': Decimal(timestamp),
+                    'status': 'DONE',
+                    'n_classes': len
+                }
+        )
     return 'job_completed'
 
 @app.route('/status')
@@ -126,11 +123,14 @@ def main(argv, config_filename='ov_config.json'):
 
     project, daemonized, port, batch_dir, \
     config_filename, s3_bucket_name, \
-    dynamodb_url, region_name, \
+    dynamodb, dynamodb_url, region_name, \
     log_enabled, verbose = \
         read_cmdline(argv, config_filename)
 
-    dyndb_table = get_dyndb_table(dynamodb_url, region_name)
+    if dynamodb:
+        dyndb_table = get_dyndb_table(dynamodb_url, region_name)
+    else:
+        dyndb_table = None
 
     if s3_bucket_name is not None:
         s3 = boto3.resource('s3')
