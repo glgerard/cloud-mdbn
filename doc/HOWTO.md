@@ -133,7 +133,7 @@ You can also access the instance by running this command
 where I assumed that `~/mykey.pem` is the private key file associated to the
 _mykey_ key pair.
 
-When you have finished your experiments with make sure to destroy the stack 
+When you have finished your experiments make sure to destroy the stack 
 
     aws cloudformation delete-stack --stack-name mdbn
 
