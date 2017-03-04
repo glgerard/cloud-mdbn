@@ -5,9 +5,14 @@ if [ $# -ne 1 ]; then
     exit -1
 fi
 
+if [ -z "${MDBN_ROOT}" ]; then
+    echo "Error: MDBN_ROOT not defined. Please source env.sh"
+    exit -1
+fi
+
 s3bucket=$1
 
-aws s3 cp server-cloudformation.json s3://${s3bucket}
+aws s3 cp ${MDBN_ROOT}/tools/server-cloudformation.json s3://${s3bucket}
 
 region=$(aws configure get region)
 

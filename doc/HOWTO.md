@@ -103,7 +103,10 @@ Make sure you have a Key pair named _mykey_ in your AWS account. Refer to
 [Amazon EC2 Key Pairs](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html)
 for instructions how to create the key pair.
 
-Go to the root directory of the repository and first set the `S3_BUCKET` variable
+Make sure that you have `boto3` installed as a python module
+(if unsure run from the command line `pip install boto3`).
+
+Now go to the root directory of the repository and first set the `S3_BUCKET` variable
 to a unique AWS bucket name of your choice
 
     S3_BUCKET=your-bucket-name
