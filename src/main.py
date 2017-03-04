@@ -3,6 +3,8 @@ import os
 import sys
 import zipfile
 import urllib
+import requests
+import shutil
 import json
 import logging
 import traceback
@@ -59,8 +61,19 @@ def prepare_TCGA_datafiles(project, config, datadir='data'):
         if not os.path.isfile(datafile):
             if not os.path.isfile(archive):
                 print('Downloading TCGA_Data from ' + base_url)
-                testfile = urllib.URLopener()
-                testfile.retrieve(base_url + archive, archive)
+                try:
+#                    testfile = urllib.URLopener()
+#                    testfile.retrieve(base_url + archive, archive)
+                    r = requests.get(base_url + archive, verify=False)
+                    if r.status_code == requests.codes.ok:
+                        with open(archive, 'wb') as f:
+                            r.raw.decode_content = True
+                            shutil.copyfileobj(r.raw, f)
+                    else:
+                        r.raise_for_status()
+                except IOError as e:
+                    print("I/O error ({0}): {1}".format(e.errno, e.strerror))
+                    sys.exit(-1)
             zipfile.ZipFile(archive, 'r').extract(datafile)
     os.chdir(root_dir)
     return datafiles
