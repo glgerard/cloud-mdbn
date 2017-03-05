@@ -1,5 +1,5 @@
-#!/bin/bash
-# Start the MDBN network in deamon node
+#!/usr/bin/env bash
+# Start the MDBN network in daemon node
 # Receives a single parameter, the TCGA project either OV or LAML
 
 if [ $# -ne 1 ]; then

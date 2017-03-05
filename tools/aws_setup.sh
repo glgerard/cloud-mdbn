@@ -8,10 +8,11 @@ REPO=https://github.com/glgerard/cloud-mdbn.git
 sudo apt-get -q -y install g++
 sudo apt-get -q -y install python-qt4
 sudo apt-get -q -y install awscli
-sudo mkfs /dev/xvdk
-sudo mkdir /mnt/db
-sudo mount /dev/xvdk /mnt/db
-sudo chown ubuntu:ubuntu /mnt/db
+sudo mke2fs -t ext4 /dev/xvdk
+USER_MP=/u01
+sudo mkdir ${USER_MP}
+echo "/dev/xvdk		${USER_MP}	 ext4	defaults,discard	0 0" >> /etc/fstab
+sudo mount ${USER_MP}
 wget -q https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O ~/miniconda.sh
 bash ~/miniconda.sh -b -p $HOME/miniconda
 source $HOME/miniconda/bin/activate
@@ -23,9 +24,7 @@ conda install -y -q theano
 conda install -y -q pyqt
 conda install -y -q matplotlib
 conda install -y -q flask
-cd /mnt/db
+cd ${USER_MP}
 git clone $REPO
-cd cloud-mdbn
-source tools/env.sh
-aws s3 sync s3://${S3_BUCKET}/queue queue
-python src/main.py -t OV -b queue -s ${S3_BUCKET} -y -l -v
+sudo chown ubuntu:ubuntu cloud-mdbn
+su ubuntu -c "${USER_MP}/cloud-mdbn/tools/start_mdbn_cloud.sh OV ${S3_BUCKET}"

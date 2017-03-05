@@ -132,7 +132,7 @@ files under the `queue` directory on a t.micro EC2 instance .
 You can also access the instance by checking the public IP address of the EC2 instance
 with this command
 
-    ec2ip = $(aws cloudformation describe-stacks --stack-name mdbn \
+    ec2ip=$(aws cloudformation describe-stacks --stack-name mdbn \
     --query Stacks[0].Outputs[0].OutputValue | sed -e's/"//g')
     
 Once you have the IP address you can connect with
