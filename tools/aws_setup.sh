@@ -27,5 +27,5 @@ conda install -y -q flask
 conda install -y -q requests
 cd ${USER_MP}
 git clone $REPO
-sudo chown ubuntu:ubuntu cloud-mdbn
+sudo chown -R ubuntu:ubuntu cloud-mdbn
 su ubuntu -c "cd ${USER_MP}/cloud-mdbn; tools/start_mdbn_cloud.sh OV ${S3_BUCKET}"
