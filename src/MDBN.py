@@ -38,6 +38,8 @@ from utils import find_unique_classes
 from utils import write_config
 from dbn import DBN
 from six.moves import cPickle
+from botocore.exceptions import ClientError
+from decimal import Decimal
 
 def train_dbn(train_set, validation_set,
               name="",
@@ -89,6 +91,8 @@ class MDBN(object):
                  log_enabled=False,
                  verbose=False,
                  s3_bucket=None,
+                 dyndb_table=None,
+                 batch_start_date_str=None,
                  output_dir="MDBN_run"):
         self.holdout_fraction = holdout_fraction
         self.repeats = 1
@@ -97,19 +101,21 @@ class MDBN(object):
         self.batch_dir_prefix = batch_dir_prefix
         self.output_dir = output_dir
         self.s3_bucket = s3_bucket
+        self.dyndb_table = dyndb_table
+        if batch_start_date_str is None:
+            batch_start_date = datetime.datetime.utcnow()
+            batch_start_date_str = batch_start_date.strftime("%Y%m%dT%H%M%S")
+#            batch_start_date_str = batch_start_date.isoformat()
+        self.batch_start_date_str=batch_start_date_str
 
     def run(self, config, datafiles):
-        config_hash = config['uuid']
-
-        batch_start_date = datetime.datetime.now()
-        batch_start_date_str = batch_start_date.strftime("%Y-%m-%d_%H%M")
+        uuid = config['uuid']
 
         if not os.path.isdir(self.output_dir):
             os.mkdir(self.output_dir)
 
         batch_output_dir = '%s/%s_%s' % \
-                           (self.output_dir, self.batch_dir_prefix, config_hash)
-#                           (self.output_dir, self.batch_dir_prefix, batch_start_date_str)
+                           (self.output_dir, self.batch_dir_prefix, self.batch_start_date_str)
 
         if not os.path.isdir(batch_output_dir):
             os.mkdir(batch_output_dir)
@@ -119,17 +125,34 @@ class MDBN(object):
         else:
             log_level = mdbnlogging.INFO
 
-        if self.log_enabled:
-            mdbnlogging.basicConfig(filename=batch_output_dir + '/batch.log', log_level=log_level)
+        last_run = 0
+        n_classes = []
+
+        try:
+            response = self.dyndb_table.get_item(
+                Key={
+                    'uuid': uuid,
+                    'timestamp': self.batch_start_date_str
+                }
+            )
+        except ClientError as e:
+            print(e.response['Error']['Message'])
         else:
-            mdbnlogging.basicConfig(log_level=log_level)
+            item = response['Item']
+            last_run = item['n_runs']
+            n_classes = item['n_classes']
 
-        mdbnlogging.info("CONFIG_UUID:%s" % config_hash)
+        for run in range(last_run,config["runs"]):
+            rng = numpy.random.RandomState(config["seed"]+run*1000)
 
-        rng = numpy.random.RandomState(config["seed"])
+            if self.log_enabled:
+                mdbnlogging.basicConfig(filename=batch_output_dir + '/run.%s.log' % run,
+                                        log_level=log_level)
+            else:
+                mdbnlogging.basicConfig(log_level=log_level)
 
-        results = []
-        for run in range(config["runs"]):
+            mdbnlogging.info("CONFIG_UUID:%s" % uuid)
+
             #        try:
             run_start_date = datetime.datetime.now()
             mdbnlogging.info('RUN:%i:start date:%s:start time:%s' % (run,
@@ -139,12 +162,12 @@ class MDBN(object):
                                     run=run,
                                     output_folder=batch_output_dir,
                                     network_file='Exp_%s_run_%d.npz' %
-                                                 (config_hash, run),
+                                                 (uuid, run),
                                     rng=rng)
             current_date_time = datetime.datetime.now()
             classes = find_unique_classes((dbn_output > 0.5) * numpy.ones_like(dbn_output))
-            mdbnlogging.info('RUN:%i:classes identified:%d' % (run, numpy.max(classes[0]) + 1))
-            results.append(classes[0])
+            n_classes.append(Decimal(numpy.max(classes[0])+1))
+            mdbnlogging.info('RUN:%i:classes identified:%d' % (run, n_classes[-1]))
             mdbnlogging.info('RUN:%i:stop date:%s:stop time:%s' % (run,
                                                                    current_date_time.strftime("%Y.%m.%d"),
                                                                    current_date_time.strftime("%H.%M.%S")))
@@ -152,21 +175,41 @@ class MDBN(object):
             #            logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[0]))
             #            logging.error('RUN:%i:unexpected error:%s' % (run, sys.exc_info()[1]))
             #            traceback.format_exc()
+
+            if self.s3_bucket is not None:
+                try:
+                    self.s3_bucket.upload_file(batch_output_dir + '/' +
+                                               'Results_%s.npz' % uuid,
+                                               batch_output_dir + '/' +
+                                               'Results_%s.npz' % uuid)
+                    self.s3_bucket.upload_file(batch_output_dir + '/run.%s.log' % run,
+                                               batch_output_dir + '/run.%s.log' % run)
+                except OSError as e:
+                    print("OS error ({0}): {1}".format(e.errno, e.strerror))
+                except:
+                    print("Could not transfer %s to s3" % batch_output_dir, file=sys.stderr)
+
+            if self.dyndb_table is not None:
+                self.dyndb_table.update_item(  # Update the run just completed in DynamoDB
+                    Key={
+                        'uuid': uuid,
+                        'timestamp': self.batch_start_date_str
+                    },
+                    UpdateExpression="set n_runs = n_runs + :val, num_classes = :c, status = :s",
+                    ExpressionAttributeValues={
+                        ':val': Decimal(1),
+                        ':c': n_classes,
+                        ':s': 'IN_PROGRESS'
+                    }
+                )
+
         root_dir = os.getcwd()
         os.chdir(batch_output_dir)
-#       numpy.savez('Results_%s.npz' % config_hash,
-#                    results=results)
         write_config(config, config['name'])
         os.chdir(root_dir)
 
         if self.s3_bucket is not None:
             try:
-                self.s3_bucket.upload_file(batch_output_dir + '/batch.log',
-                                           batch_output_dir + '/batch.log')
-                self.s3_bucket.upload_file(batch_output_dir + '/' +
-                                           'Results_%s.npz' % config_hash,
-                                           batch_output_dir + '/' +
-                                           'Results_%s.npz' % config_hash)
                 self.s3_bucket.upload_file(batch_output_dir + '/' + config['name'],
                                       batch_output_dir + '/' + config['name'])
                 shutil.rmtree(batch_output_dir)
@@ -175,8 +218,19 @@ class MDBN(object):
             except:
                 print("Could not transfer %s to s3" % batch_output_dir, file=sys.stderr)
 
-        len_classes = [numpy.max(classes) + 1 for classes in results]
-        return len_classes
+        if self.dyndb_table is not None:
+            self.dyndb_table.update_item(  # Update the run just completed in DynamoDB
+                Key={
+                    'uuid': uuid,
+                    'timestamp': self.batch_start_date_str
+                },
+                UpdateExpression="set status = :s",
+                ExpressionAttributeValues={
+                    ':s': 'DONE'
+                }
+            )
+
+        return n_classes
 
     def train(self,
               config,

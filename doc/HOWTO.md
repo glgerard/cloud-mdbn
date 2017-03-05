@@ -29,7 +29,7 @@ This will create a run for the Ovarian cancer data
     cd config
     init_configs.sh ov ov_configs_2017_02_20_1133_init.csv
     cd ..
-    python src/main.py -t OV -c config/ov_config_20_1_05.json -l -v
+    python src/main.py -t OV -c config/ov_config_20_1_05.json -l -v -i 20170220T114308
 
 The first time you run the command you will obtain the following message
 
@@ -41,18 +41,23 @@ At the end of the 5 runs which take about 50 minutes to complete on a
 i5-4690K CPU with a GeForce 1070 GPU, you will get the following
 content in the directory `MDBN_run`
 
-    OV_Batch_73dab4ea3383b2666d1220969a7feba8/
-    ├── batch.log
+    OV_Batch_20170220T114308/
     ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_0.npz
     ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_1.npz
     ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_2.npz
     ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_3.npz
     ├── Exp_73dab4ea3383b2666d1220969a7feba8_run_4.npz
-    └── ov_config_20_1_05.json
+    ├── ov_config_20_1_05.json
+    ├── run.0.og
+    ├── run.1.og
+    ├── run.2.og
+    ├── run.3.og
+    └── run.4.og
 
-To monitor progress you can use the following command
+To monitor progress, for example, of the first run you can use the
+following command
 
-    tail -f ${MDBN_ROOT}/MDBN_run/OV_Batch_c714f750448bae901740f8f2866f36ea/batch.log
+    tail -f ${MDBN_ROOT}/MDBN_run/OV_Batch_20170220T114308/run.0.log
     
 The data can be reviewed with a Jupyter notebook. From the root directory of
 the repository run
@@ -66,23 +71,26 @@ You can now test a run with AML data. To do this execute the following commands
     cd ${MDBN_ROOT}/config
     init_configs.sh aml aml_configs_2017_02_20_2050_init.csv
     cd ..
-    python src/main.py -t AML -c config/aml_config_20_1_05.json -l -v
+    python src/main.py -t AML -c config/aml_config_20_1_05.json -l -v -i 20170220T205506
     
 At the end of the 4 runs you will get the following new content under `MDBN_run`
 
-    AML_Batch_eb6856a251bb8680da6593de98db7b5a/
+    AML_Batch_20170220T205506/
     ├── aml_config_20_1_05.json
-    ├── batch.log
     ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_0.npz
     ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_1.npz
     ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_2.npz
-    └── Exp_eb6856a251bb8680da6593de98db7b5a_run_3.npz
+    ├── Exp_eb6856a251bb8680da6593de98db7b5a_run_3.npz
+    ├── run.0.log
+    ├── run.1.log
+    ├── run.2.log
+    └── run.3.og
     
-As before progress can be monitored via
+As before progress, for example, of the first run can be monitored via
     
-    tail -f ${MDBN_ROOT}/MDBN_run/AML_Batch_eb6856a251bb8680da6593de98db7b5a/batch.log
-    
-The data can be reviewied instead via the Jupyter notebook. In case you have stopped
+    tail -f ${MDBN_ROOT}/MDBN_run/AML_Batch_20170220T205506/run.0.log
+
+The data can be reviewed instead via the Jupyter notebook. In case you have stopped
 it restart as before and open the notebook `notebooks/View-AML-20_1_05.ipynb`.
 
 # AWS EC2 installation

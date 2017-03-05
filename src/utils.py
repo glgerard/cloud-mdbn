@@ -195,27 +195,27 @@ def get_dyndb_table(dynamodb_url, region_name):
     client = boto3.client('dynamodb', region_name=region_name, endpoint_url=dynamodb_url)
     list_tables = client.list_tables()
     dynamodb = boto3.resource('dynamodb', region_name=region_name, endpoint_url=dynamodb_url)
-    if not 'jobs' in list_tables['TableNames']:
-        table = dynamodb.create_table(
-            TableName='jobs',
+    if not 'jobs_by_uuid' in list_tables['TableNames']:
+        jobs_by_uuid = dynamodb.create_table(
+            TableName='jobs_by_uuid',
             KeySchema=[
                 {
-                    'AttributeName': 'job',
+                    'AttributeName': 'uuid',
                     'KeyType': 'HASH'
                 },
                 {
-                    'AttributeName': 'run',
+                    'AttributeName': 'timestamp',
                     'KeyType': 'RANGE'
                 }
             ],
             AttributeDefinitions=[
                 {
-                    'AttributeName': 'job',
+                    'AttributeName': 'uuid',
                     'AttributeType': 'S'
                 },
                 {
-                    'AttributeName': 'run',
-                    'AttributeType': 'N'
+                    'AttributeName': 'timestamp',
+                    'AttributeType': 'S'
                 }
             ],
             ProvisionedThroughput={
@@ -223,11 +223,11 @@ def get_dyndb_table(dynamodb_url, region_name):
                 'WriteCapacityUnits': 5
             }
         )
-        table.meta.client.get_waiter('table_exists').wait(TableName='jobs')
+        jobs_by_uuid.meta.client.get_waiter('table_exists').wait(TableName='jobs_by_uuid')
     else:
-        table = dynamodb.Table('jobs')
+        jobs_by_uuid = dynamodb.Table('jobs_by_uuid')
 
-    return table
+    return jobs_by_uuid
 
 def read_cmdline(argv, config_filename):
     project="OV"
@@ -235,6 +235,8 @@ def read_cmdline(argv, config_filename):
     verbose = False
     daemon = False
     batch_dir = None
+    batch_start_date_str = None
+
     s3_bucket_name = None
     port = 5000
 #    dynamodb_url = "https://localhost:8000"
@@ -243,10 +245,11 @@ def read_cmdline(argv, config_filename):
     region_name = "eu-west-1"
 
     try:
-        opts, args = getopt.getopt(argv, "ht:c:dp:b:s:yu:r:lv",
+        opts, args = getopt.getopt(argv, "ht:c:dp:b:i:s:yu:r:lv",
                                    ["help", "tcga=", "config=", "daemon",
-                                    "port=", "batch=", "s3=", "dynamodb", "url=",
-                                    "region=", "log", "verbose"])
+                                    "port=", "batch=", "instant=", "s3=",
+                                    "dynamodb", "url=", "region=",
+                                    "log", "verbose"])
     except getopt.GetoptError:
         usage()
         sys.exit(2)
@@ -275,6 +278,8 @@ def read_cmdline(argv, config_filename):
             log_enabled = True
             batch_dir = arg
             daemon = False
+        elif opt in ("-i", "--instant"):
+            batch_start_date_str = arg
         elif opt in ("-s", "--s3"):
             s3_bucket_name = arg
         elif opt in ("-y", "--dynamodb"):
@@ -293,7 +298,7 @@ def read_cmdline(argv, config_filename):
         else:
             assert False, "unhandled option"
 
-    return project, daemon, port, batch_dir,\
+    return project, daemon, port, batch_dir, batch_start_date_str, \
            config_filename, s3_bucket_name, \
            dynamodb, dynamodb_url, region_name, \
            log_enabled, verbose
@@ -305,6 +310,7 @@ def usage():
     print("--daemon listen for a JSON config")
     print("--port=port change the default listening port. The default port is 5000")
     print("--batch=batch_dir load configuration files from a directory")
+    print("--instant timestamp in ISO 8601 format")
     print("--s3=bucket store the results on S3 bucket")
     print("--dynamodb store job status on DynamoDB")
     print("--url=url DynamoDB URL. The default is None")
@@ -312,24 +318,18 @@ def usage():
     print("--log create batch.log file")
     print("--verbose print additional information during training")
 
-
 def write_config(config, configFile):
     with open(configFile, 'w') as f:
         json.dump(config, f, indent=4, sort_keys=True)
 
-
-def run_completed(dyndb_table, uuid):
-    done = False
+def n_runs_completed(dyndb_table, uuid, timestamp):
+    n_runs = 0
     if dyndb_table is None:
-        return done
+        return n_runs
 
     response = dyndb_table.query(
-        KeyConditionExpression=Key('job').eq(uuid)
+        KeyConditionExpression=Key('uuid').eq(uuid) & Key('timestamp').eq(timestamp)
     )
     for i in response['Items']:
-        done = True
-        print('Run with UUID %s already completed: run %s with %s classes' %
-              (uuid, i['run'], i['n_classes']), file=sys.stderr)
-        print('Date: ' + datetime.fromtimestamp(i['timestamp']).strftime("%Y-%m-%d_%H%M"),
-              file=sys.stderr)
-    return done
+        n_runs = i['n_runs']
+    return n_runs

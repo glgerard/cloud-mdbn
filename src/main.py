@@ -17,7 +17,7 @@ from flask import Flask
 from flask import request
 from utils import read_cmdline
 from utils import get_dyndb_table
-from utils import run_completed
+from utils import n_runs_completed
 from threading import Thread
 
 app = Flask('cloud-mdbn')
@@ -77,29 +77,30 @@ def prepare_TCGA_datafiles(project, config, datadir='data'):
 
 def start_run(config):
     global jobStatus
+    global mdbn
+
     uuid = config['uuid']
 
-    if run_completed(dyndb_table, uuid):
+    n_runs = n_runs_completed(mdbn.dyndb_table, uuid, mdbn.batch_start_date_str)
+    if n_runs == config['runs']:
         return 'job_completed'
+
+    if mdbn.dyndb_table is not None and n_runs == 0:
+        mdbn.dyndb_table.put_item(  # Add the job entry in DynamoDB
+            Item={
+                'uuid': uuid,
+                'timestamp': mdbn.batch_start_date_str,
+                'n_runs': Decimal(0),
+                'n_classes': [],
+                'status': 'NEW'
+            }
+        )
 
     jobStatus.set_status(BUSY, uuid)
     datafiles = prepare_TCGA_datafiles(project, config)
-    len_classes = mdbn.run(config, datafiles)
+    mdbn.run(config, datafiles)
     jobStatus.set_status(FREE, uuid)
 
-    timestamp = time.time()
-    for run, len in enumerate(len_classes):
-        len = int(len)
-        if dyndb_table is not None:
-            dyndb_table.put_item(  # Add the completed job in DynamoDB
-                Item={
-                    'job': uuid,
-                    'run': run,
-                    'timestamp': Decimal(timestamp),
-                    'status': 'DONE',
-                    'n_classes': len
-                }
-        )
     return 'job_completed'
 
 @app.route('/status')
@@ -129,9 +130,8 @@ def main(argv, config_filename='ov_config.json'):
     global mdbn
     global project
     global s3_bucket
-    global dyndb_table
 
-    project, daemon, port, batch_dir, \
+    project, daemon, port, batch_dir, batch_start_date_str, \
     config_filename, s3_bucket_name, \
     dynamodb, dynamodb_url, region_name, \
     log_enabled, verbose = \
@@ -149,7 +149,8 @@ def main(argv, config_filename='ov_config.json'):
         s3_bucket = None
 
     mdbn = MDBN(project+'_Batch',log_enabled=log_enabled, verbose=verbose,
-                s3_bucket=s3_bucket)
+                s3_bucket=s3_bucket, dyndb_table=dyndb_table,
+                batch_start_date_str=batch_start_date_str)
 
     if not daemon:
         if batch_dir is None:

@@ -12,9 +12,10 @@ fi
 
 project=$1
 s3bucket=$2
+timestamp=$(date -u "+%Y%m%dT%H%M%S")
 
 source tools/env.sh
 
 aws s3 sync s3://${s3bucket}/queue queue
 
-nohup /miniconda/bin/python src/main.py -y -v -t ${project} -b queue -s3 ${s3bucket}&
+nohup /miniconda/bin/python src/main.py -y -v -t ${project} -b queue -s3 ${s3bucket} -i ${timestamp} &
