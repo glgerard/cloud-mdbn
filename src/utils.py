@@ -233,7 +233,7 @@ def read_cmdline(argv, config_filename):
     project="OV"
     log_enabled = False
     verbose = False
-    daemonized = False
+    daemon = False
     batch_dir = None
     s3_bucket_name = None
     port = 5000
@@ -270,10 +270,11 @@ def read_cmdline(argv, config_filename):
             log_enabled = True
         elif opt in ("-d", "--dameon"):
             log_enabled = True
-            daemonized = True
+            daemon = True
         elif opt in ("-b", "--batch"):
+            log_enabled = True
             batch_dir = arg
-            daemonized = False
+            daemon = False
         elif opt in ("-s", "--s3"):
             s3_bucket_name = arg
         elif opt in ("-y", "--dynamodb"):
@@ -292,7 +293,7 @@ def read_cmdline(argv, config_filename):
         else:
             assert False, "unhandled option"
 
-    return project, daemonized, port, batch_dir,\
+    return project, daemon, port, batch_dir,\
            config_filename, s3_bucket_name, \
            dynamodb, dynamodb_url, region_name, \
            log_enabled, verbose
@@ -308,7 +309,7 @@ def usage():
     print("--dynamodb store job status on DynamoDB")
     print("--url=url DynamoDB URL. The default is None")
     print("--region=name AWS region name. The default is eu-west-1")
-    print("--log=filename output file")
+    print("--log create batch.log file")
     print("--verbose print additional information during training")
 
 

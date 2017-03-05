@@ -131,7 +131,7 @@ def main(argv, config_filename='ov_config.json'):
     global s3_bucket
     global dyndb_table
 
-    project, daemonized, port, batch_dir, \
+    project, daemon, port, batch_dir, \
     config_filename, s3_bucket_name, \
     dynamodb, dynamodb_url, region_name, \
     log_enabled, verbose = \
@@ -151,7 +151,7 @@ def main(argv, config_filename='ov_config.json'):
     mdbn = MDBN(project+'_Batch',log_enabled=log_enabled, verbose=verbose,
                 s3_bucket=s3_bucket)
 
-    if not daemonized:
+    if not daemon:
         if batch_dir is None:
             runConfig(config_filename)
         else:
