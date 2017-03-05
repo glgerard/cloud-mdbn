@@ -128,19 +128,20 @@ class MDBN(object):
         last_run = 0
         n_classes = []
 
-        try:
-            response = self.dyndb_table.get_item(
-                Key={
-                    'uuid': uuid,
-                    'timestamp': self.batch_start_date_str
-                }
-            )
-        except ClientError as e:
-            print(e.response['Error']['Message'])
-        else:
-            item = response['Item']
-            last_run = item['n_runs']
-            n_classes = item['n_classes']
+        if self.dyndb_table is not None:
+            try:
+                response = self.dyndb_table.get_item(
+                    Key={
+                        'uuid': uuid,
+                        'timestamp': self.batch_start_date_str
+                    }
+                )
+            except ClientError as e:
+                print(e.response['Error']['Message'])
+            else:
+                item = response['Item']
+                last_run = item['n_runs']
+                n_classes = item['n_classes']
 
         for run in range(last_run,config["runs"]):
             rng = numpy.random.RandomState(config["seed"]+run*1000)
