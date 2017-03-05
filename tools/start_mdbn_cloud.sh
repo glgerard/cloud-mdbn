@@ -12,9 +12,8 @@ project=$1
 s3bucket=$2
 
 source /miniconda/bin/activate
-
-cd cloud-mdbn
 source tools/env.sh
+
 aws s3 sync s3://${S3_BUCKET}/queue queue
 
 nohup python src/main.py -t $project -b queue -s3 $s3bucket -y -l -v &
