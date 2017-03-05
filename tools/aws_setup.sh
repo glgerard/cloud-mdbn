@@ -24,6 +24,7 @@ conda install -y -q theano
 conda install -y -q pyqt
 conda install -y -q matplotlib
 conda install -y -q flask
+conda install -y -q requests
 cd ${USER_MP}
 git clone $REPO
 sudo chown ubuntu:ubuntu cloud-mdbn
