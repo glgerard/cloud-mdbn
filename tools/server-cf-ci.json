@@ -31,13 +31,7 @@
   "Mappings": {
     "EC2RegionMap": {
       "eu-west-1": {
-        "UbuntuXenialHVMEBSBacked64bit": "ami-405f7226"
-      },
-      "eu-west-2": {
-        "UbuntuXenialHVMEBSBacked64bit": "ami-ede2e889"
-      },
-      "eu-central-1": {
-        "UbuntuXenialHVMEBSBacked64bit": "ami-3f1bd150"
+        "MinicondaTheanoUbuntuXenial64bit": "ami-21cde547"
       }
     }
   },
@@ -55,7 +49,7 @@
             {
               "Ref": "AWS::Region"
             },
-            "UbuntuXenialHVMEBSBacked64bit"
+            "MinicondaTheanoUbuntuXenial64bit"
           ]
         },
         "SubnetId": {
@@ -86,7 +80,7 @@
                   "Ref": "DynamoDBTable"
                 },
                 "\n",
-                "curl -s https://raw.githubusercontent.com/glgerard/cloud-mdbn/master/tools/aws_setup.sh | bash -ex\n"
+                "curl -s https://raw.githubusercontent.com/glgerard/cloud-mdbn/master/tools/aws_setup_ci.sh | bash -ex\n"
               ]
             ]
           }

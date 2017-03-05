@@ -11,7 +11,7 @@ sudo apt-get -q -y install awscli
 sudo mke2fs -t ext4 /dev/xvdk
 USER_MP=/u01
 sudo mkdir ${USER_MP}
-echo "/dev/xvdk		${USER_MP}	 ext4	defaults,discard	0 0" >> /etc/fstab
+echo "/dev/xvdk		${USER_MP}	 ext4	defaults,noauto	0 0" >> /etc/fstab
 sudo mount ${USER_MP}
 wget -q https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O ~/miniconda.sh
 bash ~/miniconda.sh -b -p $HOME/miniconda

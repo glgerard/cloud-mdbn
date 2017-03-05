@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <s3_bucket>"
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <s3_bucket> <cloudformation.json"
     exit -1
 fi
 
@@ -11,8 +11,9 @@ if [ -z "${MDBN_ROOT}" ]; then
 fi
 
 s3bucket=$1
+cf_config_file=$2
 
-aws s3 cp ${MDBN_ROOT}/tools/server-cloudformation.json s3://${s3bucket}
+aws s3 cp ${MDBN_ROOT}/tools/${cf_config_file} s3://${s3bucket}
 
 region=$(aws configure get region)
 
@@ -26,7 +27,7 @@ subnet=$(aws ec2 describe-subnets \
 
 aws cloudformation create-stack --stack-name mdbn \
     --capabilities CAPABILITY_IAM --template-url \
-https://s3-${region}.amazonaws.com/${s3bucket}/server-cloudformation.json \
+https://s3-${region}.amazonaws.com/${s3bucket}/${cf_config_file} \
     --parameters \
             ParameterKey=KeyName,ParameterValue=mykey \
             ParameterKey=AvZone,ParameterValue=$az \
