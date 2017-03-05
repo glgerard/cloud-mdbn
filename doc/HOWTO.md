@@ -119,7 +119,7 @@ following commands
     cd queue
     init_configs.sh ov ../config/ov_aws_init.csv
     sync_s3.sh . $S3_BUCKET
-    create_stack $S3_BUCKET
+    create_stack $S3_BUCKET server-cloudformation.json
     
 Replace the string `aws-your-bucket-name` with a unique identifier of your choice.
 This will be the S3 bucket where the results will be stored. It must be unique not to
@@ -129,15 +129,9 @@ with the reverse DNS name of your institutional domain.
 The last command will automatically launch a batch run of all the configuration
 files under the `queue` directory on a t.micro EC2 instance .
 
-You can also access the instance by checking the public IP address of the EC2 instance
-with this command
+You can also connect to the instance with this command
 
-    ec2ip=$(aws cloudformation describe-stacks --stack-name mdbn \
-    --query Stacks[0].Outputs[0].OutputValue | sed -e's/"//g')
-    
-Once you have the IP address you can connect with
-
-    ssh -i ~/mykey.pem ubuntu@$ec2ip
+    ssh_to_ec2.sh ~/mykey.pem
 
 where I assumed that `~/mykey.pem` is the private key file associated to the
 _mykey_ key pair.
@@ -145,7 +139,9 @@ _mykey_ key pair.
 You can check the status of the initialization by looking at the file
 
     tail -20 /var/log/cloud-init-output.log
-    
+
+The run data should be stored in the directory called `/u01/cloud-mdbn/MDBN_run`.
+
 If everything worked as expected the data will now be uploaded
 on the S3 bucket you previously defined.
 
@@ -153,3 +149,30 @@ When you have finished your experiments make sure to destroy the stack
 
     aws cloudformation delete-stack --stack-name mdbn
 
+### Custom image
+
+The Cloudformation stack you created previously start from a plain vanilla
+Ubuntu 16.04 install and every time you create the stack the
+miniconda and Theano environment is installed.
+
+Once you have the EC2 instance running you can also easily
+create a custom image for future reuse. If you do so you
+can just change the following section in `tools/server-cf-ci.json`
+
+    "Mappings": {
+        "EC2RegionMap": {
+            "eu-west-1": {
+            "MinicondaTheanoUbuntuXenial64bit": "ami-21cde547"
+        }
+    }
+
+and replace the string `ami-21cde547` with the identifier of
+the image you just created.
+
+If you do so then the stack can be launched with
+
+    create_stack $S3_BUCKET server-cf-ci.json
+
+This will use the custom image effectively skipping the initial
+lenghty process of downloading and installing the full
+miniconda environment with Theano.
