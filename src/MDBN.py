@@ -196,7 +196,7 @@ class MDBN(object):
                         'uuid': uuid,
                         'timestamp': self.batch_start_date_str
                     },
-                    UpdateExpression="set n_runs = n_runs + :val, num_classes = :c, status = :s",
+                    UpdateExpression="set n_runs = n_runs + :val, num_classes = :c, job_status = :s",
                     ExpressionAttributeValues={
                         ':val': Decimal(1),
                         ':c': n_classes,
@@ -225,7 +225,7 @@ class MDBN(object):
                     'uuid': uuid,
                     'timestamp': self.batch_start_date_str
                 },
-                UpdateExpression="set status = :s",
+                UpdateExpression="set job_status = :s",
                 ExpressionAttributeValues={
                     ':s': 'DONE'
                 }

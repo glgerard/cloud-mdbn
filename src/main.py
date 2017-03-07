@@ -92,7 +92,7 @@ def start_run(config):
                 'timestamp': mdbn.batch_start_date_str,
                 'n_runs': Decimal(0),
                 'n_classes': [],
-                'status': 'NEW'
+                'job_status': 'NEW'
             }
         )
 
