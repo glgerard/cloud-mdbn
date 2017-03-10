@@ -16,6 +16,8 @@ timestamp=$(date -u "+%Y%m%dT%H%M%S")
 
 source tools/env.sh
 
-aws s3 mv --recursive s3://${s3bucket}/queue queue
+aws s3 mv s3://${s3bucket}/payload/payload.zip payload.zip
 
-nohup /miniconda/bin/python src/main.py -y -v -t ${project} -b queue -s3 ${s3bucket} -i ${timestamp} &
+unzip payload.zip
+
+# nohup /miniconda/bin/python src/main.py -y -v -t ${project} -b payload -s3 ${s3bucket} -i ${timestamp} &

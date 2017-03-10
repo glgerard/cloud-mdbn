@@ -160,6 +160,7 @@ def main(argv, config_filename='ov_config.json'):
                                      (batch_dir, project.lower()))
             for config_filename in config_files:
                 runConfig(config_filename)
+                os.remove(config_filename)
     else:
         app.run(host='0.0.0.0',port=port, debug=False)
 
