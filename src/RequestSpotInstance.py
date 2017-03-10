@@ -1,6 +1,6 @@
 from __future__ import print_function
 import boto3
-from datetime import datetime
+import datetime
 import uuid
 import json
 
@@ -21,11 +21,11 @@ client = boto3.client('ec2')
 s3_client = boto3.client('s3')
 
 def handler(event, context):
-    today = datetime.now()
+    today = datetime.datetime.now()
     for record in event['Records']:
         bucket = record['s3']['bucket']['name']
         key = record['s3']['object']['key']
-        download_path = '/tmp/{}{}'.format(uuid.uuid4(), key)
+        download_path = '/tmp/{}'.format(uuid.uuid4(), key)
         s3_client.download_file(bucket, key, download_path)
         with open(download_path) as fp:
             config = json.load(fp)

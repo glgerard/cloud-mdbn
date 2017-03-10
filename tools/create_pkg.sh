@@ -3,8 +3,10 @@
 NETCAT=nc
 
 function check_ssh {
-    $NETCAT -z -G 5 $1 22
-    return $?
+    $NETCAT -z -G 5 $1 22 > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "connected"
+    fi
 }
 
 # Create a Python pakage for the lambda function
@@ -45,12 +47,10 @@ fi
 
 echo "Check the EC2 instance is available..."
 
-new_ec2=0
 while [[ `aws ec2 describe-instances --instance-id $instance_id --query 'Reservations[0].Instances[0].State.Code' \
           --output text` -ne 16 ]]; do
   echo -n "*"
   sleep 10
-  new_ec2=1
 done
 echo""
 
@@ -78,13 +78,11 @@ public_ip=$(aws ec2 describe-instances --instance-id $instance_id \
 
 # Wait for the SSH port to be available
 
-if [ $new_ec2 -eq 1 ]; then
-    echo "Wait for the IP network to come up"
-    while [[ `check_ssh $public_ip` -eq 1 ]]; do
-        echo -n "."
-        sleep 5
-    done
-fi
+echo "Wait for the IP network to come up"
+while [[ `check_ssh $public_ip` != "connected" ]]; do
+    echo -n "."
+    sleep 5
+done
 
 scp -i $key $pyfile ec2-user@$public_ip:~/$pyfile
 scp -i $key zip_pkg.sh ec2-user@$public_ip:~/zip_pkg.sh

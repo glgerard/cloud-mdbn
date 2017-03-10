@@ -3,8 +3,10 @@
 NETCAT=nc
 
 function check_ssh {
-    $NETCAT -z -G 5 $1 22
-    return $?
+    $NETCAT -z -G 5 $1 22 > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "connected"
+    fi
 }
 
 if [ $# -ne 1 ]; then
@@ -20,7 +22,7 @@ ec2ip=$(aws ec2 describe-instances --filters "Name=tag:system,Values=mdbn" \
 # Wait for the SSH port to be available
 
 echo "Wait for the IP network to come up"
-while [[ `check_ssh $ec2ip` -eq 1 ]]; do
+while [[ `check_ssh $ec2ip` != "connected" ]]; do
     echo -n "."
     sleep 5
 done
