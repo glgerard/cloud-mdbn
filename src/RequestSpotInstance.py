@@ -3,6 +3,7 @@ import boto3
 import datetime
 import uuid
 import json
+import base64
 
 user_data_script = '''#!/bin/bash -ex
 S3_BUCKET=%s
@@ -33,14 +34,14 @@ def handler(event, context):
                                                  SpotPrice=config['spot_price'],
                                                  InstanceCount=1,
                                                  Type='one-time',
-                                                 ValidFrom=today,
+#                                                 ValidFrom=today,
                                                  ValidUntil=today+datetime.timedelta(days=1),
                                                  BlockDurationMinutes=60,
                                                  LaunchSpecification={
                                                      'ImageId': 'ami-e3f7c285',
                                                      'KeyName': 'mykey',
                                                      'SecurityGroups': ['mdbnsecgroup'],
-                                                     'UserData': user_data_script % bucket,
+                                                     'UserData': base64.b64encode(user_data_script % bucket),
                                                      'InstanceType': config['instance_type'],
                                                      'BlockDeviceMappings': [
                                                          {
