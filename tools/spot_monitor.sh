@@ -8,6 +8,10 @@ function monitor {
 
 while [[ monitor != "terminated" ]]; do
     sleep 5
+
+    if [ -z `pgrep -u ubuntu python` ]; then
+        shutdown
+    fi
 done
 
 echo "Handling termination"
