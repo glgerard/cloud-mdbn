@@ -20,4 +20,6 @@ aws s3 mv s3://${s3bucket}/payload/payload.zip payload.zip
 
 unzip payload.zip
 
+nohup sudo tools/spot_monitor.sh &
+
 # nohup /miniconda/bin/python src/main.py -y -v -t ${project} -b payload -s3 ${s3bucket} -i ${timestamp} &

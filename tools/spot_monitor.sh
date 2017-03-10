@@ -12,5 +12,9 @@ done
 
 echo "Handling termination"
 
+pkill -u ubuntu python
+
+zip -r9 payload.zip payload
+
 aws s3 cp payload.zip s3://${s3bucket}/payload
 
