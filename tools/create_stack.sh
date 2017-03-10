@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [ $# -ne 2 ]; then
-    echo "Usage: $0 <s3_bucket> <cloudformation.json"
+    echo "Usage: $0 <s3_bucket> <cloudformation.json>"
     exit -1
 fi
 
