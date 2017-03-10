@@ -2,7 +2,6 @@
 
 # Initialization parameters
 
-pkgname=CreateEC2Instance
 region=eu-west-1
 aws_profile=adminuser
 bucketOwner="403237659795"
@@ -12,12 +11,13 @@ if [ -z ${MDBN_ROOT} ]; then
     echo "Error: no MDBN_ROOT defined. Please source tools/env.sh."
 fi
 
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 <s3-bucket>"
+if [ $# -ne 2 ]; then
+    echo "Usage: $0 <pkgname> <s3-bucket>"
     exit -1
 fi
 
-sourcebucket=$1
+pkgname=$1
+sourcebucket=$2
 
 cwd=`pwd`
 cd ${MDBN_ROOT}/src
@@ -42,7 +42,7 @@ fi
 aws lambda add-permission \
 --function-name $pkgname \
 --region $region \
---statement-id "s3-lambda-id-001" \
+--statement-id "$pkgname-id-001" \
 --action "lambda:InvokeFunction" \
 --principal s3.amazonaws.com \
 --source-arn arn:aws:s3:::${sourcebucket} \

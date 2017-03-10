@@ -8,6 +8,7 @@ REPO=https://github.com/glgerard/cloud-mdbn.git
 sudo apt-get -q -y install g++
 sudo apt-get -q -y install python-qt4
 sudo apt-get -q -y install awscli
+sudo apt-get -q -y install unzip
 sudo mke2fs -t ext4 /dev/xvdk
 USER_MP=/u01
 sudo mkdir ${USER_MP}

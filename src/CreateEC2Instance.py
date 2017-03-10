@@ -1,7 +1,7 @@
 from __future__ import print_function
 import boto3
 
-user_data_script = """#!/bin/bash -ex
+user_data_script = '''#!/bin/bash -ex
 S3_BUCKET=%s
 DB_TABLE=jobs_by_uuid
 REPO=https://github.com/glgerard/cloud-mdbn.git
@@ -11,7 +11,8 @@ mount ${USER_MP}
 cd ${USER_MP}
 git clone $REPO
 chown -R ubuntu:ubuntu cloud-mdbn
-su ubuntu -c ""cd ${USER_MP}/cloud-mdbn; tools/start_mdbn_cloud.sh OV ${S3_BUCKET}"""""
+su ubuntu -c "(cd ${USER_MP}/cloud-mdbn; tools/start_mdbn_cloud.sh OV ${S3_BUCKET})"
+'''
 
 ec2 = boto3.resource('ec2')
 
@@ -19,7 +20,7 @@ def handler(event, context):
     for record in event['Records']:
         bucket = record['s3']['bucket']['name']
         instance = ec2.create_instances(DryRun=False,
-                             ImageId='ami-21cde547',
+                             ImageId='ami-e3f7c285',
                              MinCount=1,
                              MaxCount=1,
                              KeyName='mykey',
@@ -41,7 +42,7 @@ def handler(event, context):
                                  'Name': 'aws-ec2-mdbn'
                              }
                              )
-        tag = instance.create_tags(
+        tag = instance[0].create_tags(
             Tags=[
                 {
                     'Key': 'system',

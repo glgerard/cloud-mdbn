@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
 
+NETCAT=nc
+
+function check_ssh {
+    $NETCAT -z -G 5 $1 22
+    return $?
+}
+
 # Create a Python pakage for the lambda function
 
 if [ $# -ne 2 ]; then
@@ -36,17 +43,16 @@ else
     echo "New instance created. ID: $instance_id"
 fi
 
-# Get the instance public IP
-
-public_ip=$(aws ec2 describe-instances --instance-id $instance_id \
-	--query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
-
 echo "Check the EC2 instance is available..."
 
+new_ec2=0
 while [[ `aws ec2 describe-instances --instance-id $instance_id --query 'Reservations[0].Instances[0].State.Code' \
           --output text` -ne 16 ]]; do
-  sleep 30
+  echo -n "*"
+  sleep 10
+  new_ec2=1
 done
+echo""
 
 # Create the package
 
@@ -65,6 +71,21 @@ cd ~
 zip -g ${pkgname}.zip ${pkgname}.py
 EOF
 
+# Get the instance public IP
+
+public_ip=$(aws ec2 describe-instances --instance-id $instance_id \
+	--query 'Reservations[0].Instances[0].PublicIpAddress' --output text)
+
+# Wait for the SSH port to be available
+
+if [ $new_ec2 -eq 1 ]; then
+    echo "Wait for the IP network to come up"
+    while [[ `check_ssh $public_ip` -eq 1 ]]; do
+        echo -n "."
+        sleep 5
+    done
+fi
+
 scp -i $key $pyfile ec2-user@$public_ip:~/$pyfile
 scp -i $key zip_pkg.sh ec2-user@$public_ip:~/zip_pkg.sh
 ssh -i $key ec2-user@$public_ip "source ~/zip_pkg.sh"
@@ -74,8 +95,7 @@ scp -i $key ec2-user@$public_ip:~/${pkgname}.zip ${pkgname}.zip
 
 rm zip_pkg.sh
 
-echo - "Do you want to stop the instance ${instance_id}? (Y/N)"
-read reply
-if [ $reply == "Y" ] || [ $reply == "y" ]; then
+read -p "Do you want to stop the instance ${instance_id} (yes/no)? " reply
+if [ $reply == "yes" ] || [ $reply == "YES" ]; then
    aws ec2 terminate-instances --instance-id $instance_id
 fi
