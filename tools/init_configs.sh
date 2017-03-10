@@ -3,7 +3,7 @@
 # with standard format to be used by batch_run.py
 
 if [ -z "${MDBN_ROOT}" ]; then
-    echo "Error: MDBN_ROOT not defined. Please source env.sh"
+    echo "Error: MDBN_ROOT not defined. Please source tools/env.sh"
     exit -1
 fi
 

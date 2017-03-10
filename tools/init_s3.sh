@@ -2,7 +2,7 @@
 # Initialize the S3 bucket to store the configuration files for batch execution
 
 if [ -z "${S3BUCKET}" ]; then
-    echo "Error: S3BUCKET not defined. Please source env.sh"
+    echo "Error: S3BUCKET not defined. Please source tools/env.sh"
     exit -1
 fi
 
