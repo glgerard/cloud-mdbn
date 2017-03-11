@@ -5,7 +5,7 @@ two types of TCGA tumoral genetic data: Ovarian cancer and Acute Myeloid Leukemi
 
 The network architecture and tuning hyperparameters are configured with a JSON file.
 
-Detail instructions on how to setup your work enviroment and test the configuration
+Detailed instructions on how to setup your work enviroment and test the configuration
 are contained in the [HOWTO](doc/HOWTO.md) document.
 
 Once you have cloned the repository the analysis can be started interactively with
@@ -30,11 +30,12 @@ The full set of command options is documented below
     --daemon listen for a JSON config
     --port=port change the default listening port. The default port is 5000
     --batch=batch_dir load configuration files from a directory
+    --instant timestamp in ISO 8601 format
     --s3=bucket store the results on S3 bucket
     --dynamodb store job status on DynamoDB
     --url=url DynamoDB URL. The default is None
     --region=name AWS region name. The default is eu-west-1
-    --log=filename output file
+    --log create batch.log file
     --verbose print additional information during training
 
 ## Basics on configuration file syntax
