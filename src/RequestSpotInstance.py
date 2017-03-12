@@ -7,6 +7,7 @@ import base64
 
 user_data_script = '''#!/bin/bash -ex
 S3_BUCKET=%s
+PAYLOAD=%s
 DB_TABLE=jobs_by_uuid
 REPO=https://github.com/glgerard/cloud-mdbn.git
 mke2fs -t ext4 /dev/xvdk
@@ -15,7 +16,7 @@ mount ${USER_MP}
 cd ${USER_MP}
 git clone $REPO
 chown -R ubuntu:ubuntu cloud-mdbn
-su ubuntu -c "(cd ${USER_MP}/cloud-mdbn; tools/start_mdbn_cloud.sh OV ${S3_BUCKET})"
+su ubuntu -c "(cd ${USER_MP}/cloud-mdbn; tools/start_mdbn_cloud.sh OV ${S3_BUCKET} ${PAYLOAD})"
 '''
 
 client = boto3.client('ec2')
@@ -41,7 +42,8 @@ def handler(event, context):
                                                      'ImageId': 'ami-e3f7c285',
                                                      'KeyName': 'mykey',
                                                      'SecurityGroups': ['mdbnsecgroup'],
-                                                     'UserData': base64.b64encode(user_data_script % bucket),
+                                                     'UserData': base64.b64encode(user_data_script %
+                                                                                  (bucket, config['payload'])),
                                                      'InstanceType': config['instance_type'],
                                                      'BlockDeviceMappings': [
                                                          {

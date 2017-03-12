@@ -310,7 +310,7 @@ def usage():
     print("--daemon listen for a JSON config")
     print("--port=port change the default listening port. The default port is 5000")
     print("--batch=batch_dir load configuration files from a directory")
-    print("--instant timestamp in ISO 8601 format")
+    print("--instant=timestamp in ISO 8601 format")
     print("--s3=bucket store the results on S3 bucket")
     print("--dynamodb store job status on DynamoDB")
     print("--url=url DynamoDB URL. The default is None")

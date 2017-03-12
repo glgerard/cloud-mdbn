@@ -30,7 +30,7 @@ The full set of command options is documented below
     --daemon listen for a JSON config
     --port=port change the default listening port. The default port is 5000
     --batch=batch_dir load configuration files from a directory
-    --instant timestamp in ISO 8601 format
+    --instant=timestamp in ISO 8601 format
     --s3=bucket store the results on S3 bucket
     --dynamodb store job status on DynamoDB
     --url=url DynamoDB URL. The default is None
