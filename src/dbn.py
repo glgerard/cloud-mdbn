@@ -161,21 +161,15 @@ class DBN(object):
 
             if W_list is None:
                 W = numpy.asarray(
-                        numpy_rng.normal(
-                            scale=0.01,
-#                            numpy_rng.uniform(
-#                                low=-4.*numpy.sqrt(6. / (n_in + n_out)),
-#                                high=4.*numpy.sqrt(6. / (n_in + n_out)),
-                                size=(n_in, n_out)
-                             ),dtype=theano.config.floatX)
+                        numpy_rng.normal(scale=0.01,
+                                         size=(n_in, n_out)),
+                    dtype=theano.config.floatX)
             else:
                 W = W_list[layer]
-
             if b_list is None:
                 b = numpy.zeros((n_out,), dtype=theano.config.floatX)
             else:
                 b = b_list[layer]
-
             if c_list is None:
                 c = numpy.zeros((n_in,), dtype=theano.config.floatX)
             else:
@@ -218,9 +212,9 @@ class DBN(object):
                     vbias=theano.shared(c, name='vbias', borrow=True),
                     p=p)
 
-            self.params.extend(rbm_layer.params)
-
             self.rbm_layers.append(rbm_layer)
+
+            self.params.extend(rbm_layer.params)
 
     def number_of_nodes(self):
         '''
@@ -337,9 +331,6 @@ class DBN(object):
                     },
                     on_unused_input='warn',
                     mode=mode
-#                    mode=NanGuardMode(nan_is_error=True,
-#                                      inf_is_error=True,
-#                                      big_is_error=True)
                 )
             else:
                 fn = theano.function(
@@ -349,13 +340,9 @@ class DBN(object):
                     updates=updates,
                     givens={
                             self.x: train_set_x[indexes]
-#                            rbm.momentum: momentum
                     },
                     on_unused_input='warn',
                     mode = mode
-#                    mode=NanGuardMode(nan_is_error=True,
-#                                      inf_is_error=True,
-#                                      big_is_error=True)
                 )
 
             # append `fn` to the list of functions

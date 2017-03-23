@@ -403,7 +403,6 @@ class RBM(object):
         Compute the gradient of the log-likelihood for an RBM with respect
         to the parameters self.params using the expectations.
 
-        :param batch_size: number of samples of the training set
         :param ph_mean: symbolic variable with p(h_i=1|v0) where v0 is a
                         training sample for all hidden nodes and for all samples
         :param nh_mean: symbolic variable with p(h_i=1|vk) where vk is the
@@ -412,6 +411,7 @@ class RBM(object):
         :param nv_mean: symbolic variable with p(v_j=1|hk) where hk is the final
                         hidden layer of the Gibbs chain for all visible nodes and
                         for all samples
+        :param batch_size: number of samples of the training set
         :param weightcost: scalar used as weight-cost for L1 weight-decay
                         (see Hinton, "A Practical Guide to Training Restricted
                         Boltzmann Machines" (2010))

@@ -31,32 +31,31 @@ def handler(event, context):
         s3_client.download_file(bucket, key, download_path)
         with open(download_path) as fp:
             config = json.load(fp)
-        response = client.request_spot_instances(DryRun=False,
-                                                 SpotPrice=config['spot_price'],
-                                                 InstanceCount=1,
-                                                 Type='one-time',
-#                                                 ValidFrom=today,
-                                                 ValidUntil=today+datetime.timedelta(days=1),
-                                                 BlockDurationMinutes=60,
-                                                 LaunchSpecification={
-                                                     'ImageId': 'ami-e3f7c285',
-                                                     'KeyName': 'mykey',
-                                                     'SecurityGroups': ['mdbnsecgroup'],
-                                                     'UserData': base64.b64encode(user_data_script %
-                                                                                  (bucket, config['payload'])),
-                                                     'InstanceType': config['instance_type'],
-                                                     'BlockDeviceMappings': [
-                                                         {
-                                                             "DeviceName": "/dev/sdk",
-                                                             "Ebs": {
-                                                                 "VolumeSize": 16,
-                                                                 "DeleteOnTermination": True,
-                                                                 "VolumeType": "standard"
-                                                             }
-                                                         }
-                                                     ],
-                                                     'IamInstanceProfile': {
-                                                         'Name': 'aws-ec2-mdbn'
-                                                     }
-                                                 }
-                                                 )
+        client.request_spot_instances(DryRun=False,
+                                      SpotPrice=config['spot_price'],
+                                      InstanceCount=1,
+                                      Type='one-time',
+                                      ValidUntil=today + datetime.timedelta(days=1),
+                                      BlockDurationMinutes=60,
+                                      LaunchSpecification={
+                                          'ImageId': 'ami-e3f7c285',
+                                          'KeyName': 'mykey',
+                                          'SecurityGroups': ['mdbnsecgroup'],
+                                          'UserData': base64.b64encode(user_data_script %
+                                                            (bucket, config['payload'])),
+                                          'InstanceType': config['instance_type'],
+                                          'BlockDeviceMappings': [
+                                              {
+                                                  "DeviceName": "/dev/sdk",
+                                                  "Ebs": {
+                                                      "VolumeSize": 16,
+                                                      "DeleteOnTermination": True,
+                                                      "VolumeType": "standard"
+                                                  }
+                                              }
+                                          ],
+                                          'IamInstanceProfile': {
+                                              'Name': 'aws-ec2-mdbn'
+                                          }
+                                      }
+                                      )

@@ -59,6 +59,14 @@ class HiddenLayer(object):
         :type n_out: int
         :param n_out: number of hidden units
 
+        :type W: theano.tensor.sharedvar.TensorSharedVariable
+        :param W: weights matrix associated to the layer. If None
+                  it is initialized by this constructor. Default is None.
+
+        :type b: theano.tensor.sharedvar.TensorSharedVariable
+        :param b: biases vector associated to the layer. If Nont
+                  it is initialized by this constructor. Default is None.
+
         :type activation: theano.Op or function
         :param activation: Non linearity to be applied in the hidden
                            layer
