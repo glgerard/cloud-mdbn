@@ -697,12 +697,13 @@ class RBM(object):
 
         return samples
 
-    def reverse_sampling(self, n_samples, persistent_hid_chain):
+    def reverse_sampling(self, n_samples, persistent_hid_chain, gibbs_steps = 50):
         """
         Sampling from the RBM.
 
         :param n_samples:
-        :param persistent_hid_chain
+        :param persistent_hid_chain:
+        :param gibbs_steps:
         :return:
         """
 
@@ -713,7 +714,6 @@ class RBM(object):
                                               name='r_sample',
                                               borrow=True)
 
-        plot_every = 50
         # define one step of Gibbs sampling define a
         # function that does `plot_every` steps before returning the
         # sample for plotting
@@ -730,7 +730,7 @@ class RBM(object):
         ) = theano.scan(
             self.gibbs_hvh,
             outputs_info=[None, None, None, None, None, persistent_hid_chain],
-            n_steps=plot_every,
+            n_steps=gibbs_steps,
             name="gibbs_hvh"
         )
         # add to updates the shared variable that takes care of our persistent
@@ -752,7 +752,7 @@ class RBM(object):
         for idx in range(n_samples):
             # generate `plot_every` intermediate samples that we discard,
             # because successive samples in the chain are too correlated
-            print(' ... computing sample %d' % idx)
+#            print(' ... computing sample %d' % idx)
             vis_mf, vis_sample = sample_fn()
             samples.append(vis_sample)
 
